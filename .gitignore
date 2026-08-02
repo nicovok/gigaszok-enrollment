@@ -2,3 +2,6 @@ node_modules/
 .env
 *.db
 beiratkozas
+import-submissions.ts
+test-webhook.ts
+test-email.ts
