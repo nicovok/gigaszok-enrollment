@@ -1,4 +1,5 @@
 import { initDb } from "./db";
+import { initEmailAssets } from "./email";
 import { config } from "./config";
 import { AuthError } from "./middleware";
 import { authRoutes } from "./routes/auth";
@@ -8,6 +9,7 @@ import { webhookRoutes } from "./routes/webhook";
 import frontend from "../frontend/index.html";
 
 initDb();
+await initEmailAssets();
 
 const server = Bun.serve({
   port: config.port,
