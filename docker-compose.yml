@@ -6,7 +6,6 @@ services:
       - "3000:3000"
     env_file: .env
     environment:
-      - POCKETID_REDIRECT_URI=https://${COOLIFY_FQDN}/api/auth/callback
       - DB_PATH=/app/data/beiratkozas.db
     volumes:
       - db:/app/data
