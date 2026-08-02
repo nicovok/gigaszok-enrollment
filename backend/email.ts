@@ -1,0 +1,138 @@
+import nodemailer from "nodemailer";
+import { readFileSync } from "fs";
+import { config } from "./config";
+
+const transporter = nodemailer.createTransport({
+  host: config.smtp.host,
+  port: config.smtp.port,
+  secure: false,
+  auth: { user: config.smtp.user, pass: config.smtp.pass },
+});
+
+const banner = readFileSync(new URL("./email-banner.png", import.meta.url));
+const reminderBanner = readFileSync(new URL("./email-reminder-banner.png", import.meta.url));
+const footer = readFileSync(new URL("./email-footer.png", import.meta.url));
+
+function template(body: string): string {
+  return `<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+        <tr><td>
+          <img src="cid:banner" width="600" style="display:block;width:100%;max-width:600px;" />
+        </td></tr>
+        <tr><td style="padding:32px 40px 40px;">
+          ${body}
+          <p style="margin:24px 0 0;color:#333;font-size:15px;line-height:1.6;">
+            Üdv,<br/>A Gigászok csapata
+          </p>
+        </td></tr>
+        <tr><td>
+          <img src="cid:footer" width="600" style="display:block;width:100%;max-width:600px;" />
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendRegistrationEmail(to: string, parentName: string, childName: string): Promise<void> {
+  if (!to) return;
+  const html = template(`
+    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      Köszönjük, hogy beküldted <strong>${childName}</strong> beiratkozási jelentkezését a Gigászok Sportegyesülethez!
+    </p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      A beiratkozás véglegesítéséhez kérjük, utald el az 5 000 Ft-os szakosztályi hozzájárulást az alábbi bankszámlára:
+    </p>
+    <table style="background:#f0f4ff;border-radius:8px;padding:16px 20px;margin:16px 0;width:100%;box-sizing:border-box;">
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Közlemény:</strong> Adomány - ${childName}</td></tr>
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Összeg:</strong> 5 000 Ft</td></tr>
+    </table>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0;">
+      Az utalás megérkezése után e-mailben visszaigazoljuk a beiratkozást. Várunk szeptemberben úszni!
+    </p>
+  `);
+
+  await transporter.sendMail({
+    from: `"Gigászok" <${config.smtp.from}>`,
+    to,
+    subject: `Beiratkozási jelentkezés beérkezett – ${childName}`,
+    html,
+    attachments: [
+      { filename: "beiratkozas.png", content: banner, cid: "banner" },
+      { filename: "footer.png", content: footer, cid: "footer" },
+    ],
+  });
+}
+
+export async function sendReminderEmail(to: string, parentName: string, childName: string): Promise<void> {
+  if (!to) return;
+  const html = template(`
+    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      Emlékeztetőül jelezzük, hogy <strong>${childName}</strong> beiratkozása még nem véglegesített,
+      mivel az 5 000 Ft-os szakosztályi hozzájárulás még nem érkezett meg.
+    </p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      Kérjük, utald el az összeget az alábbi adatokkal:
+    </p>
+    <table style="background:#f0f4ff;border-radius:8px;padding:16px 20px;margin:16px 0;width:100%;box-sizing:border-box;">
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Számlaszám:</strong> 62100140 - 11035408 - 00000000</td></tr>
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Közlemény:</strong> Adomány - ${childName}</td></tr>
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Összeg:</strong> 5 000 Ft</td></tr>
+    </table>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      Ha már átutaltad, kérjük hagyd figyelmen kívül ezt az üzenetet!
+    </p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0;">
+      Amennyiben vissza szeretnéd vonni a jelentkezést, kérjük jelezd az alábbi elérhetőségek egyikén.
+    </p>
+  `);
+
+  await transporter.sendMail({
+    from: `"Gigászok" <${config.smtp.from}>`,
+    to,
+    subject: `Emlékeztető: beiratkozási díj – ${childName}`,
+    html,
+    attachments: [
+      { filename: "beiratkozas.png", content: reminderBanner, cid: "banner" },
+      { filename: "footer.png", content: footer, cid: "footer" },
+    ],
+  });
+}
+
+export async function sendPaymentConfirmationEmail(to: string, parentName: string, childName: string): Promise<void> {
+  if (!to) return;
+  const html = template(`
+    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      Örömmel értesítünk, hogy <strong>${childName}</strong> beiratkozási díja (5 000 Ft) megérkezett!
+    </p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      A beiratkozás <strong>visszaigazolva</strong>. Az 5 000 Ft az első havidíjba kerül beszámításra.
+    </p>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0;">
+      Várunk szeptemberben úszni! 🏊
+    </p>
+  `);
+
+  await transporter.sendMail({
+    from: `"Gigászok" <${config.smtp.from}>`,
+    to,
+    subject: `Beiratkozás megerősítve – ${childName}`,
+    html,
+    attachments: [
+      { filename: "beiratkozas.png", content: banner, cid: "banner" },
+      { filename: "footer.png", content: footer, cid: "footer" },
+    ],
+  });
+}

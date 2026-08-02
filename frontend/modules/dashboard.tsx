@@ -1,0 +1,655 @@
+import { useState, useEffect, useCallback } from "react";
+import {
+  AppShell, Group, Title, Button, Select, Badge, Table,
+  Text, Stack, SimpleGrid, Paper, Modal, TextInput,
+  SegmentedControl, FileButton, Alert, Loader, Center,
+  ActionIcon, Tooltip, CopyButton, Code, Avatar, Image, UnstyledButton,
+} from "@mantine/core";
+import {
+  IconUpload, IconPlus, IconCheck, IconCopy,
+  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory,
+} from "@tabler/icons-react";
+import logo from "../logo.png";
+
+type User = { name: string; email: string; picture?: string };
+
+type Term = {
+  id: string;
+  name: string;
+  slug: string;
+  active: number;
+  webhook_secret: string;
+  created_at: number;
+};
+
+type Applicant = {
+  id: string;
+  term_id: string;
+  child_name: string;
+  parent_name: string;
+  email: string;
+  raw_json: string;
+  paid: number;
+  created_at: number;
+};
+
+type CSVResult = {
+  matched: number;
+  updated: number;
+  already_paid: number;
+};
+
+type Props = {
+  token: string;
+  user: User;
+  onLogout: () => void;
+};
+
+function apiFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
+  return fetch(path, {
+    ...options,
+    headers: { ...(options?.headers ?? {}), Authorization: `Bearer ${token}` },
+  }).then(r => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json() as Promise<T>;
+  });
+}
+
+function formatDate(ts: number) {
+  return new Date(ts).toLocaleDateString("hu-HU", {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+export default function Dashboard({ token, user, onLogout }: Props) {
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvResult, setCsvResult] = useState<CSVResult | null>(null);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [confirmApplicant, setConfirmApplicant] = useState<Applicant | null>(null);
+  const [remindModalOpen, setRemindModalOpen] = useState(false);
+  const [remindLoading, setRemindLoading] = useState(false);
+  const [remindResult, setRemindResult] = useState<{ sent: number; failed: number } | null>(null);
+  const [logApplicant, setLogApplicant] = useState<Applicant | null>(null);
+  const [emailLogs, setEmailLogs] = useState<{ id: string; type: string; sent_at: number }[]>([]);
+  const [confirmRemindApplicant, setConfirmRemindApplicant] = useState<Applicant | null>(null);
+  const [newTermName, setNewTermName] = useState("");
+  const [newTermSlug, setNewTermSlug] = useState("");
+  const [termError, setTermError] = useState("");
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
+
+  const fetchTerms = useCallback(async () => {
+    try {
+      const data = await apiFetch<Term[]>("/api/terms", token);
+      setTerms(data);
+      if (data.length > 0 && !selectedTermId) {
+        const active = data.find(t => t.active === 1) ?? data[0];
+        setSelectedTermId(active.id);
+      }
+    } catch {
+      // ignore
+    }
+  }, [token, selectedTermId]);
+
+  useEffect(() => { fetchTerms(); }, [fetchTerms]);
+
+  useEffect(() => {
+    if (!selectedTermId) { setApplicants([]); return; }
+    setLoadingApplicants(true);
+    setCsvResult(null);
+    apiFetch<Applicant[]>(`/api/terms/${selectedTermId}/applicants`, token)
+      .then(setApplicants)
+      .catch(() => setApplicants([]))
+      .finally(() => setLoadingApplicants(false));
+  }, [selectedTermId, token]);
+
+  const termOptions = terms.map(t => ({ value: t.id, label: t.name }));
+
+  const filtered = applicants.filter(a =>
+    filter === "all" ? true : filter === "paid" ? a.paid === 1 : a.paid === 0
+  );
+  const paidCount = applicants.filter(a => a.paid === 1).length;
+  const unpaidCount = applicants.length - paidCount;
+
+  async function handleCSVUpload(file: File | null) {
+    if (!file || !selectedTermId) return;
+    setCsvLoading(true);
+    setCsvResult(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/terms/${selectedTermId}/csv`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const result = await res.json() as CSVResult;
+      setCsvResult(result);
+      // Refresh applicants
+      const updated = await apiFetch<Applicant[]>(`/api/terms/${selectedTermId}/applicants`, token);
+      setApplicants(updated);
+    } catch {
+      setCsvResult(null);
+    } finally {
+      setCsvLoading(false);
+    }
+  }
+
+  async function togglePaid(applicant: Applicant) {
+    if (!selectedTermId) return;
+    await apiFetch(`/api/terms/${selectedTermId}/applicants/${applicant.id}/paid`, token, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paid: applicant.paid === 0 }),
+    });
+    setApplicants(prev =>
+      prev.map(a => a.id === applicant.id ? { ...a, paid: a.paid === 0 ? 1 : 0 } : a)
+    );
+  }
+
+  function handleNewTermNameChange(val: string) {
+    setNewTermName(val);
+    // Auto-generate slug: "2026/27" → "beiratkozas2627"
+    const digits = val.replace(/[^0-9]/g, "");
+    if (digits.length >= 4) {
+      const slug = "beiratkozas" + digits.slice(2, 4) + (digits.length >= 6 ? digits.slice(4, 6) : digits.slice(4));
+      setNewTermSlug(slug);
+    }
+  }
+
+  async function handleCreateTerm() {
+    if (!newTermName.trim() || !newTermSlug.trim()) {
+      setTermError("Minden mező kitöltése kötelező.");
+      return;
+    }
+    try {
+      await apiFetch("/api/terms", token, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newTermName.trim(), slug: newTermSlug.trim() }),
+      });
+      setNewTermName("");
+      setNewTermSlug("");
+      setTermError("");
+      await fetchTerms();
+    } catch {
+      setTermError("A slug már foglalt, vagy hiba történt.");
+    }
+  }
+
+  async function handleDeleteTerm(id: string) {
+    try {
+      await apiFetch(`/api/terms/${id}`, token, { method: "DELETE" });
+      if (selectedTermId === id) setSelectedTermId(null);
+      await fetchTerms();
+    } catch {
+      alert("Nem törölhető: vannak jelentkezők ebben a turnusban.");
+    }
+  }
+
+  const selectedTerm = terms.find(t => t.id === selectedTermId);
+  const webhookUrl = selectedTerm
+    ? `${window.location.origin}/webhooks/${selectedTerm.slug}`
+    : null;
+
+  const initials = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  return (
+    <AppShell header={{ height: 56 }} padding="md">
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group gap="sm">
+            <Image src={logo} h={40} w={40} fit="contain" />
+            <Title order={3}>Beiratkozás</Title>
+            <Select
+              data={termOptions}
+              value={selectedTermId}
+              onChange={setSelectedTermId}
+              placeholder="Válassz turnust"
+              w={160}
+            />
+            <Button
+              leftSection={<IconEdit size={15} />}
+              variant="subtle"
+              color="gray"
+              size="xs"
+              onClick={() => setTermsModalOpen(true)}
+            >
+              Turnusok
+            </Button>
+          </Group>
+          <Group gap="sm">
+            <UnstyledButton
+              onClick={() => window.open("https://auth.nicoprt.xyz", "_blank")}
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <Avatar size="sm" radius="xl" color="blue" src={user.picture ?? undefined}>{initials}</Avatar>
+              <Text size="sm" fw={500} visibleFrom="sm">{user.name}</Text>
+            </UnstyledButton>
+            <Button variant="subtle" color="gray" size="xs" onClick={onLogout}>Kilépés</Button>
+          </Group>
+        </Group>
+      </AppShell.Header>
+
+      <AppShell.Main maw={1100} mx="auto">
+        <Stack gap="md">
+          {/* No terms yet */}
+          {terms.length === 0 && (
+            <Alert color="blue" title="Nincs turnus" icon={<IconAlertCircle size={16} />}>
+              Hozz létre egy turnust a kezdéshez.{" "}
+              <Button variant="subtle" size="xs" onClick={() => setTermsModalOpen(true)}>
+                Turnus létrehozása
+              </Button>
+            </Alert>
+          )}
+
+          {/* Stats */}
+          {selectedTermId && (
+            <SimpleGrid cols={3}>
+              <Paper withBorder p="md" radius="md">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Összes jelentkező</Text>
+                <Title order={2}>{applicants.length}</Title>
+              </Paper>
+              <Paper withBorder p="md" radius="md">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Befizetve</Text>
+                <Title order={2} c="green">{paidCount}</Title>
+              </Paper>
+              <Paper withBorder p="md" radius="md">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={600}>Hiányzó befizetés</Text>
+                <Title order={2} c="red">{unpaidCount}</Title>
+              </Paper>
+            </SimpleGrid>
+          )}
+
+          {/* Webhook URL */}
+          {webhookUrl && (
+            <Paper withBorder p="sm" radius="md">
+              <Group gap="xs">
+                <Text size="sm" fw={500}>Webhook URL:</Text>
+                <Code>{webhookUrl}</Code>
+                <CopyButton value={webhookUrl}>
+                  {({ copied, copy }) => (
+                    <Tooltip label={copied ? "Másolva!" : "Másolás"}>
+                      <ActionIcon variant="subtle" size="sm" onClick={copy}>
+                        {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+              </Group>
+            </Paper>
+          )}
+
+          {/* Actions bar */}
+          {selectedTermId && (
+            <Group justify="space-between">
+              <SegmentedControl
+                value={filter}
+                onChange={v => setFilter(v as typeof filter)}
+                data={[
+                  { label: "Összes", value: "all" },
+                  { label: "Befizetve", value: "paid" },
+                  { label: "Nem fizetett", value: "unpaid" },
+                ]}
+              />
+              <Button
+                variant="light"
+                color="orange"
+                disabled={unpaidCount === 0}
+                onClick={() => { setRemindResult(null); setRemindModalOpen(true); }}
+              >
+                Emlékeztető küldése ({unpaidCount})
+              </Button>
+            </Group>
+          )}
+
+
+          {/* Applicants table */}
+          {selectedTermId && (
+            loadingApplicants ? (
+              <Center py="xl"><Loader /></Center>
+            ) : (
+              <Paper withBorder radius="md">
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Résztvevő neve</Table.Th>
+                      <Table.Th>Szülő neve</Table.Th>
+                      <Table.Th>E-mail</Table.Th>
+                      <Table.Th>Jelentkezés időpontja</Table.Th>
+                      <Table.Th>Befizetés státusza</Table.Th>
+                      <Table.Th />
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {filtered.length === 0 ? (
+                      <Table.Tr>
+                        <Table.Td colSpan={4}>
+                          <Text c="dimmed" ta="center" py="md" size="sm">Nincs találat</Text>
+                        </Table.Td>
+                      </Table.Tr>
+                    ) : (
+                      filtered.map(a => (
+                        <Table.Tr key={a.id}>
+                          <Table.Td fw={500}>{a.child_name}</Table.Td>
+                          <Table.Td c="dimmed" size="sm">{a.parent_name}</Table.Td>
+                          <Table.Td c="dimmed" size="sm">{a.email}</Table.Td>
+                          <Table.Td c="dimmed" size="sm">{formatDate(a.created_at)}</Table.Td>
+                          <Table.Td>
+                            <Badge color={a.paid ? "green" : "red"} variant="light">
+                              {a.paid ? "Befizetve" : "Nincs befizetve"}
+                            </Badge>
+                          </Table.Td>
+                          <Table.Td>
+                            <Group gap={4} wrap="nowrap">
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                color={a.paid ? "red" : "green"}
+                                onClick={() => setConfirmApplicant(a)}
+                              >
+                                {a.paid ? "Visszavon" : "Befizetve"}
+                              </Button>
+                              {!a.paid && a.email && (
+                                <Tooltip label="Emlékeztető küldése">
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    color="orange"
+                                    onClick={() => setConfirmRemindApplicant(a)}
+                                  >
+                                    <IconBell size={14} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              )}
+                              <Tooltip label="Email napló">
+                                <ActionIcon
+                                  size="sm"
+                                  variant="subtle"
+                                  color="gray"
+                                  onClick={async () => {
+                                    const logs = await apiFetch<{ id: string; type: string; sent_at: number }[]>(
+                                      `/api/terms/${selectedTermId}/applicants/${a.id}/email-log`, token
+                                    );
+                                    setEmailLogs(logs);
+                                    setLogApplicant(a);
+                                  }}
+                                >
+                                  <IconHistory size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            </Group>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))
+                    )}
+                  </Table.Tbody>
+                </Table>
+              </Paper>
+            )
+          )}
+        </Stack>
+      </AppShell.Main>
+
+      {/* Terms management modal */}
+      <Modal
+        opened={termsModalOpen}
+        onClose={() => { setTermsModalOpen(false); setTermError(""); }}
+        title="Turnusok kezelése"
+        size="lg"
+      >
+        <Stack gap="md">
+          {/* Existing terms */}
+          {terms.length > 0 && (
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Név</Table.Th>
+                  <Table.Th>Webhook slug</Table.Th>
+                  <Table.Th>Secret</Table.Th>
+                  <Table.Th>Státusz</Table.Th>
+                  <Table.Th />
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {terms.map(t => (
+                  <Table.Tr key={t.id}>
+                    <Table.Td fw={500}>{t.name}</Table.Td>
+                    <Table.Td><Code>/webhooks/{t.slug}</Code></Table.Td>
+                    <Table.Td>
+                      <Group gap={4}>
+                        <Code style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {t.webhook_secret || "–"}
+                        </Code>
+                        {t.webhook_secret && (
+                          <CopyButton value={t.webhook_secret}>
+                            {({ copied, copy }) => (
+                              <Tooltip label={copied ? "Másolva!" : "Secret másolása"}>
+                                <ActionIcon variant="subtle" size="sm" onClick={copy}>
+                                  {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                          </CopyButton>
+                        )}
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={t.active ? "green" : "gray"} variant="light">
+                        {t.active ? "Aktív" : "Inaktív"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={4}>
+                        <Tooltip label={t.active ? "Inaktiválás" : "Aktiválás"}>
+                          <ActionIcon
+                            variant="subtle"
+                            color={t.active ? "gray" : "green"}
+                            onClick={async () => {
+                              await apiFetch(`/api/terms/${t.id}`, token, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ active: t.active ? 0 : 1 }),
+                              });
+                              fetchTerms();
+                            }}
+                          >
+                            <IconCheck size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Törlés">
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            onClick={() => handleDeleteTerm(t.id)}
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
+
+          {/* New term form */}
+          <Paper withBorder p="md" radius="md">
+            <Stack gap="sm">
+              <Text fw={500} size="sm">Új turnus</Text>
+              <TextInput
+                label="Megnevezés"
+                placeholder="pl. 2026/27"
+                value={newTermName}
+                onChange={e => handleNewTermNameChange(e.currentTarget.value)}
+              />
+              <TextInput
+                label="Webhook slug"
+                placeholder="pl. beiratkozas2627"
+                value={newTermSlug}
+                onChange={e => setNewTermSlug(e.currentTarget.value)}
+                description="A webhook URL: /webhooks/[slug]"
+              />
+              {termError && <Text c="red" size="sm">{termError}</Text>}
+              <Button leftSection={<IconPlus size={16} />} onClick={handleCreateTerm}>
+                Létrehozás
+              </Button>
+            </Stack>
+          </Paper>
+        </Stack>
+      </Modal>
+
+      {/* Reminder modal */}
+      <Modal
+        opened={remindModalOpen}
+        onClose={() => setRemindModalOpen(false)}
+        title="Emlékeztető küldése"
+        size="sm"
+      >
+        <Stack gap="md">
+          {!remindResult ? (
+            <>
+              <Text size="sm">
+                Emlékeztető emailt küldesz <strong>{unpaidCount}</strong> nem fizető jelentkezőnek.
+              </Text>
+              <Group justify="flex-end">
+                <Button variant="subtle" color="gray" onClick={() => setRemindModalOpen(false)}>Mégse</Button>
+                <Button
+                  color="orange"
+                  loading={remindLoading}
+                  onClick={async () => {
+                    setRemindLoading(true);
+                    try {
+                      const res = await apiFetch<{ sent: number; failed: number }>(
+                        `/api/terms/${selectedTermId}/remind`, token, { method: "POST" }
+                      );
+                      setRemindResult(res);
+                    } finally {
+                      setRemindLoading(false);
+                    }
+                  }}
+                >
+                  Küldés
+                </Button>
+              </Group>
+            </>
+          ) : (
+            <>
+              <Text size="sm">
+                <strong>{remindResult.sent}</strong> email elküldve
+                {remindResult.failed > 0 && <>, <strong>{remindResult.failed}</strong> sikertelen</>}.
+              </Text>
+              <Group justify="flex-end">
+                <Button onClick={() => setRemindModalOpen(false)}>Bezárás</Button>
+              </Group>
+            </>
+          )}
+        </Stack>
+      </Modal>
+
+      {/* Confirm paid toggle modal */}
+      <Modal
+        opened={!!confirmApplicant}
+        onClose={() => setConfirmApplicant(null)}
+        title={confirmApplicant?.paid ? "Befizetés visszavonása" : "Befizetés manuális rögzítése"}
+        size="sm"
+      >
+        {confirmApplicant && (
+          <Stack gap="md">
+            <Text size="sm">
+              {confirmApplicant.paid
+                ? <>Biztosan visszavonod <strong>{confirmApplicant.child_name}</strong> befizetett státuszát?</>
+                : <>Biztosan befizetettre állítod <strong>{confirmApplicant.child_name}</strong> státuszát?</>
+              }
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="subtle" color="gray" onClick={() => setConfirmApplicant(null)}>Mégse</Button>
+              <Button
+                color={confirmApplicant.paid ? "red" : "green"}
+                onClick={async () => {
+                  await togglePaid(confirmApplicant);
+                  setConfirmApplicant(null);
+                }}
+              >
+                {confirmApplicant.paid ? "Visszavon" : "Igen, befizetve"}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      {/* Individual remind confirm modal */}
+      <Modal
+        opened={!!confirmRemindApplicant}
+        onClose={() => setConfirmRemindApplicant(null)}
+        title="Emlékeztető küldése"
+        size="sm"
+      >
+        {confirmRemindApplicant && (
+          <Stack gap="md">
+            <Text size="sm">
+              Emlékeztetőt küldesz <strong>{confirmRemindApplicant.child_name}</strong> szülőjének ({confirmRemindApplicant.email})?
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="subtle" color="gray" onClick={() => setConfirmRemindApplicant(null)}>Mégse</Button>
+              <Button
+                color="orange"
+                onClick={async () => {
+                  await apiFetch(
+                    `/api/terms/${selectedTermId}/applicants/${confirmRemindApplicant.id}/remind`,
+                    token, { method: "POST" }
+                  );
+                  setConfirmRemindApplicant(null);
+                }}
+              >
+                Küldés
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Email log modal */}
+      <Modal
+        opened={!!logApplicant}
+        onClose={() => setLogApplicant(null)}
+        title={`Email napló – ${logApplicant?.child_name}`}
+        size="md"
+      >
+        <Stack gap="sm">
+          {emailLogs.length === 0 ? (
+            <Text c="dimmed" size="sm">Nem lett még email elküldve.</Text>
+          ) : (
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Típus</Table.Th>
+                  <Table.Th>Küldve</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {emailLogs.map(log => (
+                  <Table.Tr key={log.id}>
+                    <Table.Td>
+                      <Badge
+                        color={log.type === "payment_confirmation" ? "green" : "orange"}
+                        variant="light"
+                      >
+                        {log.type === "payment_confirmation" ? "Befizetés visszaigazolás" : "Emlékeztető"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td c="dimmed" size="sm">{formatDate(log.sent_at)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
+        </Stack>
+      </Modal>
+    </AppShell>
+  );
+}
