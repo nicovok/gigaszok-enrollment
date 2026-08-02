@@ -8,6 +8,8 @@ import reminderBannerPath from "./email-reminder-banner.png" with { type: "file"
 import registrationBannerPath from "./email-registration-banner.png" with { type: "file" };
 // @ts-ignore
 import footerPath from "./email-footer.png" with { type: "file" };
+// @ts-ignore
+import logoPath from "./email-logo.png" with { type: "file" };
 
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
@@ -22,6 +24,7 @@ async function loadAssets() {
     reminderBanner: Buffer.from(await Bun.file(reminderBannerPath).arrayBuffer()),
     registrationBanner: Buffer.from(await Bun.file(registrationBannerPath).arrayBuffer()),
     footer: Buffer.from(await Bun.file(footerPath).arrayBuffer()),
+    logo: Buffer.from(await Bun.file(logoPath).arrayBuffer()),
   };
 }
 
@@ -129,6 +132,54 @@ export async function sendReminderEmail(to: string, parentName: string, childNam
     html,
     attachments: [
       { filename: "beiratkozas.png", content: assets.reminderBanner, cid: "banner" },
+      { filename: "footer.png", content: assets.footer, cid: "footer" },
+    ],
+  });
+}
+
+export async function sendBroadcastEmail(to: string, parentName: string, subject: string, body: string): Promise<void> {
+  if (!to) return;
+  const bodyHtml = body
+    .split("\n")
+    .map(line => line.trim() === "" ? "<br/>" : `<p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">${line}</p>`)
+    .join("\n");
+
+  const html = `<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+        <tr><td style="padding:32px 40px 0;text-align:center;">
+          <img src="cid:logo" width="100" style="display:inline-block;width:100px;" />
+        </td></tr>
+        <tr><td style="padding:24px 40px 40px;">
+          <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
+          ${bodyHtml}
+          <p style="margin:24px 0 0;color:#333;font-size:15px;line-height:1.6;">
+            Üdv,<br/>A Gigászok csapata
+          </p>
+        </td></tr>
+        <tr><td>
+          <img src="cid:footer" width="600" style="display:block;width:100%;max-width:600px;" />
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  await transporter.sendMail({
+    from: `"Gigászok" <${config.smtp.from}>`,
+    to,
+    subject,
+    html,
+    attachments: [
+      { filename: "logo.png", content: assets.logo, cid: "logo" },
       { filename: "footer.png", content: assets.footer, cid: "footer" },
     ],
   });

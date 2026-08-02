@@ -33,7 +33,7 @@ export type Applicant = {
 export type EmailLog = {
   id: string;
   applicant_id: string;
-  type: "registration" | "reminder" | "payment_confirmation";
+  type: "registration" | "reminder" | "payment_confirmation" | "custom";
   sent_at: number;
 };
 

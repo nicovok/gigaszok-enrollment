@@ -1,7 +1,7 @@
 import { requireAuth } from "../middleware";
 import { db } from "../db";
 import type { BunRequest, Applicant, EmailLog, CSVResult } from "../schema";
-import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail } from "../email";
+import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
 import { randomUUID } from "crypto";
 
 function logEmail(applicant_id: string, type: EmailLog["type"]) {
@@ -83,6 +83,34 @@ export const applicantRoutes = {
         }
       }
       return Response.json({ ok: true });
+    },
+  },
+
+  "/api/terms/:id/broadcast": {
+    async POST(req: Request) {
+      await requireAuth(req);
+      const termId = (req as BunRequest<{ id: string }>).params.id;
+      const { subject, body, filter } = await req.json() as { subject: string; body: string; filter: "all" | "paid" | "unpaid" };
+
+      if (!subject?.trim() || !body?.trim()) {
+        return Response.json({ error: "Subject and body are required" }, { status: 400 });
+      }
+
+      let whereClause = `term_id = ? AND email != ''`;
+      if (filter === "paid") whereClause += ` AND paid = 1`;
+      if (filter === "unpaid") whereClause += ` AND paid = 0`;
+
+      const targets = db.prepare(`SELECT * FROM applicants WHERE ${whereClause}`).all(termId) as Applicant[];
+
+      const results = await Promise.allSettled(
+        targets.map(a =>
+          sendBroadcastEmail(a.email, a.parent_name, subject.trim(), body.trim())
+            .then(() => logEmail(a.id, "custom"))
+        )
+      );
+      const sent = results.filter(r => r.status === "fulfilled").length;
+      const failed = results.filter(r => r.status === "rejected").length;
+      return Response.json({ sent, failed });
     },
   },
 

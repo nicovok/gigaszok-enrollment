@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   AppShell, Group, Title, Button, Select, Badge, Table,
-  Text, Stack, SimpleGrid, Paper, Modal, TextInput,
+  Text, Stack, SimpleGrid, Paper, Modal, TextInput, Textarea,
   SegmentedControl, FileButton, Alert, Loader, Center,
   ActionIcon, Tooltip, CopyButton, Code, Avatar, Image, UnstyledButton,
 } from "@mantine/core";
 import {
   IconUpload, IconPlus, IconCheck, IconCopy,
-  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail,
+  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail, IconSend,
 } from "@tabler/icons-react";
 import logo from "../logo.png";
 
@@ -79,6 +79,12 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   const [confirmRemindApplicant, setConfirmRemindApplicant] = useState<Applicant | null>(null);
   const [deleteApplicant, setDeleteApplicant] = useState<Applicant | null>(null);
   const [confirmRegEmailApplicant, setConfirmRegEmailApplicant] = useState<Applicant | null>(null);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastBody, setBroadcastBody] = useState("");
+  const [broadcastFilter, setBroadcastFilter] = useState<"all" | "paid" | "unpaid">("all");
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; failed: number } | null>(null);
   const [newTermName, setNewTermName] = useState("");
   const [newTermSlug, setNewTermSlug] = useState("");
   const [termError, setTermError] = useState("");
@@ -298,14 +304,24 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                   { label: "Nem fizetett", value: "unpaid" },
                 ]}
               />
-              <Button
-                variant="light"
-                color="orange"
-                disabled={unpaidCount === 0}
-                onClick={() => { setRemindResult(null); setRemindModalOpen(true); }}
-              >
-                Emlékeztető küldése ({unpaidCount})
-              </Button>
+              <Group gap="xs">
+                <Button
+                  variant="light"
+                  color="orange"
+                  disabled={unpaidCount === 0}
+                  onClick={() => { setRemindResult(null); setRemindModalOpen(true); }}
+                >
+                  Emlékeztető küldése ({unpaidCount})
+                </Button>
+                <Button
+                  variant="light"
+                  color="blue"
+                  leftSection={<IconSend size={15} />}
+                  onClick={() => { setBroadcastResult(null); setBroadcastOpen(true); }}
+                >
+                  Egyedi email
+                </Button>
+              </Group>
             </Group>
           )}
 
@@ -418,6 +434,86 @@ export default function Dashboard({ token, user, onLogout }: Props) {
           )}
         </Stack>
       </AppShell.Main>
+
+      {/* Broadcast email modal */}
+      <Modal
+        opened={broadcastOpen}
+        onClose={() => setBroadcastOpen(false)}
+        title="Egyedi email küldése"
+        size="lg"
+      >
+        <Stack gap="md">
+          {!broadcastResult ? (
+            <>
+              <SegmentedControl
+                value={broadcastFilter}
+                onChange={v => setBroadcastFilter(v as typeof broadcastFilter)}
+                data={[
+                  { label: "Mindenki", value: "all" },
+                  { label: "Csak befizetők", value: "paid" },
+                  { label: "Csak nem fizetők", value: "unpaid" },
+                ]}
+                fullWidth
+              />
+              <TextInput
+                label="Tárgy"
+                placeholder="Email tárgya"
+                value={broadcastSubject}
+                onChange={e => setBroadcastSubject(e.currentTarget.value)}
+                required
+              />
+              <Textarea
+                label="Tartalom"
+                placeholder="Email szövege..."
+                value={broadcastBody}
+                onChange={e => setBroadcastBody(e.currentTarget.value)}
+                minRows={8}
+                autosize
+                required
+              />
+              <Text size="xs" c="dimmed">
+                Az emailbe automatikusan bekerül a szülő neve megszólításként és az aláírás.
+              </Text>
+              <Group justify="flex-end">
+                <Button variant="subtle" color="gray" onClick={() => setBroadcastOpen(false)}>Mégse</Button>
+                <Button
+                  color="blue"
+                  leftSection={<IconSend size={15} />}
+                  loading={broadcastLoading}
+                  disabled={!broadcastSubject.trim() || !broadcastBody.trim()}
+                  onClick={async () => {
+                    setBroadcastLoading(true);
+                    try {
+                      const res = await apiFetch<{ sent: number; failed: number }>(
+                        `/api/terms/${selectedTermId}/broadcast`, token, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ subject: broadcastSubject, body: broadcastBody, filter: broadcastFilter }),
+                        }
+                      );
+                      setBroadcastResult(res);
+                    } finally {
+                      setBroadcastLoading(false);
+                    }
+                  }}
+                >
+                  Küldés
+                </Button>
+              </Group>
+            </>
+          ) : (
+            <>
+              <Text size="sm">
+                <strong>{broadcastResult.sent}</strong> email elküldve
+                {broadcastResult.failed > 0 && <>, <strong>{broadcastResult.failed}</strong> sikertelen</>}.
+              </Text>
+              <Group justify="flex-end">
+                <Button onClick={() => { setBroadcastOpen(false); setBroadcastSubject(""); setBroadcastBody(""); }}>Bezárás</Button>
+              </Group>
+            </>
+          )}
+        </Stack>
+      </Modal>
 
       {/* Terms management modal */}
       <Modal
@@ -723,10 +819,10 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                   <Table.Tr key={log.id}>
                     <Table.Td>
                       <Badge
-                        color={log.type === "payment_confirmation" ? "green" : log.type === "registration" ? "blue" : "orange"}
+                        color={log.type === "payment_confirmation" ? "green" : log.type === "registration" ? "blue" : log.type === "custom" ? "violet" : "orange"}
                         variant="light"
                       >
-                        {log.type === "payment_confirmation" ? "Befizetés visszaigazolás" : log.type === "registration" ? "Beiratkozás visszaigazolás" : "Emlékeztető"}
+                        {log.type === "payment_confirmation" ? "Befizetés visszaigazolás" : log.type === "registration" ? "Beiratkozás visszaigazolás" : log.type === "custom" ? "Egyedi email" : "Emlékeztető"}
                       </Badge>
                     </Table.Td>
                     <Table.Td c="dimmed" size="sm">{formatDate(log.sent_at)}</Table.Td>
