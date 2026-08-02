@@ -154,9 +154,11 @@ export async function sendBroadcastEmail(to: string, parentName: string, subject
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
-        <tr><td width="600" style="background:#2C39A2;padding:24px 40px;text-align:center;width:600px;">
-          <img src="cid:logo" width="100" style="display:inline-block;width:100px;" />
-        </td></tr>
+        <tr style="background:#2C39A2;">
+          <td style="background:#2C39A2;padding:24px 40px;text-align:center;">
+            <img src="cid:logo" width="100" style="display:inline-block;width:100px;" />
+          </td>
+        </tr>
         <tr><td style="padding:24px 40px 40px;">
           <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
           ${bodyHtml}
