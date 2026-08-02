@@ -411,7 +411,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
         opened={termsModalOpen}
         onClose={() => { setTermsModalOpen(false); setTermError(""); }}
         title="Turnusok kezelése"
-        size="lg"
+        size="xl"
       >
         <Stack gap="md">
           {/* Existing terms */}
