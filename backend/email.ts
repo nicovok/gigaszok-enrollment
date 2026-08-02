@@ -1,6 +1,11 @@
 import nodemailer from "nodemailer";
-import { readFileSync } from "fs";
 import { config } from "./config";
+// @ts-ignore
+import bannerPath from "./email-banner.png" with { type: "file" };
+// @ts-ignore
+import reminderBannerPath from "./email-reminder-banner.png" with { type: "file" };
+// @ts-ignore
+import footerPath from "./email-footer.png" with { type: "file" };
 
 const transporter = nodemailer.createTransport({
   host: config.smtp.host,
@@ -9,9 +14,19 @@ const transporter = nodemailer.createTransport({
   auth: { user: config.smtp.user, pass: config.smtp.pass },
 });
 
-const banner = readFileSync(new URL("./email-banner.png", import.meta.url));
-const reminderBanner = readFileSync(new URL("./email-reminder-banner.png", import.meta.url));
-const footer = readFileSync(new URL("./email-footer.png", import.meta.url));
+async function loadAssets() {
+  return {
+    banner: Buffer.from(await Bun.file(bannerPath).arrayBuffer()),
+    reminderBanner: Buffer.from(await Bun.file(reminderBannerPath).arrayBuffer()),
+    footer: Buffer.from(await Bun.file(footerPath).arrayBuffer()),
+  };
+}
+
+let assets: Awaited<ReturnType<typeof loadAssets>>;
+
+export async function initEmailAssets() {
+  assets = await loadAssets();
+}
 
 function template(body: string): string {
   return `<!DOCTYPE html>
@@ -68,8 +83,8 @@ export async function sendRegistrationEmail(to: string, parentName: string, chil
     subject: `Beiratkozási jelentkezés beérkezett – ${childName}`,
     html,
     attachments: [
-      { filename: "beiratkozas.png", content: banner, cid: "banner" },
-      { filename: "footer.png", content: footer, cid: "footer" },
+      { filename: "beiratkozas.png", content: assets.banner, cid: "banner" },
+      { filename: "footer.png", content: assets.footer, cid: "footer" },
     ],
   });
 }
@@ -104,8 +119,8 @@ export async function sendReminderEmail(to: string, parentName: string, childNam
     subject: `Emlékeztető: beiratkozási díj – ${childName}`,
     html,
     attachments: [
-      { filename: "beiratkozas.png", content: reminderBanner, cid: "banner" },
-      { filename: "footer.png", content: footer, cid: "footer" },
+      { filename: "beiratkozas.png", content: assets.reminderBanner, cid: "banner" },
+      { filename: "footer.png", content: assets.footer, cid: "footer" },
     ],
   });
 }
@@ -131,8 +146,8 @@ export async function sendPaymentConfirmationEmail(to: string, parentName: strin
     subject: `Beiratkozás megerősítve – ${childName}`,
     html,
     attachments: [
-      { filename: "beiratkozas.png", content: banner, cid: "banner" },
-      { filename: "footer.png", content: footer, cid: "footer" },
+      { filename: "beiratkozas.png", content: assets.banner, cid: "banner" },
+      { filename: "footer.png", content: assets.footer, cid: "footer" },
     ],
   });
 }
