@@ -450,8 +450,8 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                 onChange={v => setBroadcastFilter(v as typeof broadcastFilter)}
                 data={[
                   { label: "Mindenki", value: "all" },
-                  { label: "Csak befizetők", value: "paid" },
-                  { label: "Csak nem fizetők", value: "unpaid" },
+                  { label: "Befizetve", value: "paid" },
+                  { label: "Nem fizetett", value: "unpaid" },
                 ]}
                 fullWidth
               />
