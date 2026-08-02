@@ -9,6 +9,8 @@ services:
       - DB_PATH=/app/data/beiratkozas.db
     volumes:
       - db:/app/data
+    networks:
+      - coolify
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/verify"]
       interval: 30s
@@ -18,3 +20,7 @@ services:
 
 volumes:
   db:
+
+networks:
+  coolify:
+    external: true
