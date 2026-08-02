@@ -7,7 +7,7 @@ import {
 } from "@mantine/core";
 import {
   IconUpload, IconPlus, IconCheck, IconCopy,
-  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory,
+  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail,
 } from "@tabler/icons-react";
 import logo from "../logo.png";
 
@@ -78,6 +78,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   const [emailLogs, setEmailLogs] = useState<{ id: string; type: string; sent_at: number }[]>([]);
   const [confirmRemindApplicant, setConfirmRemindApplicant] = useState<Applicant | null>(null);
   const [deleteApplicant, setDeleteApplicant] = useState<Applicant | null>(null);
+  const [confirmRegEmailApplicant, setConfirmRegEmailApplicant] = useState<Applicant | null>(null);
   const [newTermName, setNewTermName] = useState("");
   const [newTermSlug, setNewTermSlug] = useState("");
   const [termError, setTermError] = useState("");
@@ -355,6 +356,18 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                               >
                                 {a.paid ? "Visszavon" : "Befizetve"}
                               </Button>
+                              {a.email && (
+                                <Tooltip label="Beiratkozás visszaigazolás újraküldése">
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="subtle"
+                                    color="blue"
+                                    onClick={() => setConfirmRegEmailApplicant(a)}
+                                  >
+                                    <IconMail size={14} />
+                                  </ActionIcon>
+                                </Tooltip>
+                              )}
                               {!a.paid && a.email && (
                                 <Tooltip label="Emlékeztető küldése">
                                   <ActionIcon
@@ -615,6 +628,37 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                     token, { method: "POST" }
                   );
                   setConfirmRemindApplicant(null);
+                }}
+              >
+                Küldés
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Registration email resend confirm modal */}
+      <Modal
+        opened={!!confirmRegEmailApplicant}
+        onClose={() => setConfirmRegEmailApplicant(null)}
+        title="Beiratkozás visszaigazolás küldése"
+        size="sm"
+      >
+        {confirmRegEmailApplicant && (
+          <Stack gap="md">
+            <Text size="sm">
+              Beiratkozás visszaigazoló emailt küldesz <strong>{confirmRegEmailApplicant.child_name}</strong> szülőjének ({confirmRegEmailApplicant.email})?
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="subtle" color="gray" onClick={() => setConfirmRegEmailApplicant(null)}>Mégse</Button>
+              <Button
+                color="blue"
+                onClick={async () => {
+                  await apiFetch(
+                    `/api/terms/${selectedTermId}/applicants/${confirmRegEmailApplicant.id}/registration-email`,
+                    token, { method: "POST" }
+                  );
+                  setConfirmRegEmailApplicant(null);
                 }}
               >
                 Küldés
