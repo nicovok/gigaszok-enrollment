@@ -1,0 +1,45 @@
+import { Database } from "bun:sqlite";
+
+const sqlite = new Database("beiratkozas.db");
+export const db = sqlite;
+
+export function initDb() {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id TEXT PRIMARY KEY,
+      pocketid_sub TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS terms (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      webhook_secret TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS email_logs (
+      id TEXT PRIMARY KEY,
+      applicant_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      sent_at INTEGER NOT NULL,
+      FOREIGN KEY(applicant_id) REFERENCES applicants(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS applicants (
+      id TEXT PRIMARY KEY,
+      term_id TEXT NOT NULL,
+      child_name TEXT NOT NULL,
+      parent_name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      raw_json TEXT NOT NULL,
+      paid INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(term_id) REFERENCES terms(id)
+    );
+  `);
+}

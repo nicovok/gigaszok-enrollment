@@ -1,0 +1,24 @@
+{
+  "name": "beiratkozas",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot backend/index.ts",
+    "build": "bun build --compile backend/index.ts --outfile beiratkozas"
+  },
+  "dependencies": {
+    "@mantine/core": "^7.3.2",
+    "@mantine/hooks": "^7.3.2",
+    "@tabler/icons-react": "^2.44.0",
+    "nodemailer": "^9.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.3.3"
+  }
+}
