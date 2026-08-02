@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    restart: unless-stopped
     ports:
       - "3000:3000"
     env_file: .env
@@ -10,7 +11,7 @@ services:
     volumes:
       - db:/app/data
     networks:
-      - coolify
+      - app
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/verify"]
       interval: 30s
@@ -22,5 +23,5 @@ volumes:
   db:
 
 networks:
-  coolify:
-    external: true
+  app:
+    driver: bridge
