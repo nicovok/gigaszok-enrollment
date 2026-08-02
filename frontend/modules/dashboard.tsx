@@ -679,10 +679,10 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                   <Table.Tr key={log.id}>
                     <Table.Td>
                       <Badge
-                        color={log.type === "payment_confirmation" ? "green" : "orange"}
+                        color={log.type === "payment_confirmation" ? "green" : log.type === "registration" ? "blue" : "orange"}
                         variant="light"
                       >
-                        {log.type === "payment_confirmation" ? "Befizetés visszaigazolás" : "Emlékeztető"}
+                        {log.type === "payment_confirmation" ? "Befizetés visszaigazolás" : log.type === "registration" ? "Beiratkozás visszaigazolás" : "Emlékeztető"}
                       </Badge>
                     </Table.Td>
                     <Table.Td c="dimmed" size="sm">{formatDate(log.sent_at)}</Table.Td>
