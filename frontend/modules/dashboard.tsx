@@ -77,6 +77,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   const [logApplicant, setLogApplicant] = useState<Applicant | null>(null);
   const [emailLogs, setEmailLogs] = useState<{ id: string; type: string; sent_at: number }[]>([]);
   const [confirmRemindApplicant, setConfirmRemindApplicant] = useState<Applicant | null>(null);
+  const [deleteApplicant, setDeleteApplicant] = useState<Applicant | null>(null);
   const [newTermName, setNewTermName] = useState("");
   const [newTermSlug, setNewTermSlug] = useState("");
   const [termError, setTermError] = useState("");
@@ -366,6 +367,16 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                                   </ActionIcon>
                                 </Tooltip>
                               )}
+                              <Tooltip label="Törlés">
+                                <ActionIcon
+                                  size="sm"
+                                  variant="subtle"
+                                  color="red"
+                                  onClick={() => setDeleteApplicant(a)}
+                                >
+                                  <IconTrash size={14} />
+                                </ActionIcon>
+                              </Tooltip>
                               <Tooltip label="Email napló">
                                 <ActionIcon
                                   size="sm"
@@ -607,6 +618,38 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                 }}
               >
                 Küldés
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Delete applicant confirm modal */}
+      <Modal
+        opened={!!deleteApplicant}
+        onClose={() => setDeleteApplicant(null)}
+        title="Jelentkezés törlése"
+        size="sm"
+      >
+        {deleteApplicant && (
+          <Stack gap="md">
+            <Text size="sm">
+              Biztosan törlöd <strong>{deleteApplicant.child_name}</strong> jelentkezését? Ez a művelet nem vonható vissza.
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="subtle" color="gray" onClick={() => setDeleteApplicant(null)}>Mégse</Button>
+              <Button
+                color="red"
+                onClick={async () => {
+                  await apiFetch(
+                    `/api/terms/${selectedTermId}/applicants/${deleteApplicant.id}`,
+                    token, { method: "DELETE" }
+                  );
+                  setApplicants(prev => prev.filter(a => a.id !== deleteApplicant.id));
+                  setDeleteApplicant(null);
+                }}
+              >
+                Törlés
               </Button>
             </Group>
           </Stack>

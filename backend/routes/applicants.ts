@@ -56,6 +56,16 @@ export const applicantRoutes = {
     },
   },
 
+  "/api/terms/:id/applicants/:applicantId": {
+    async DELETE(req: Request) {
+      await requireAuth(req);
+      const { id: termId, applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
+      db.prepare(`DELETE FROM email_logs WHERE applicant_id = ?`).run(applicantId);
+      db.prepare(`DELETE FROM applicants WHERE id = ? AND term_id = ?`).run(applicantId, termId);
+      return Response.json({ ok: true });
+    },
+  },
+
   "/api/terms/:id/applicants/:applicantId/paid": {
     async PUT(req: Request) {
       await requireAuth(req);
