@@ -6,8 +6,9 @@ services:
     env_file: .env
     environment:
       - POCKETID_REDIRECT_URI=https://${COOLIFY_FQDN}/api/auth/callback
+      - DB_PATH=/app/data/beiratkozas.db
     volumes:
-      - db:/app/beiratkozas.db
+      - db:/app/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/verify"]
       interval: 30s

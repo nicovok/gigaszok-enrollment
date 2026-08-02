@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 
-const sqlite = new Database("beiratkozas.db");
+const sqlite = new Database(Bun.env.DB_PATH ?? "beiratkozas.db");
 export const db = sqlite;
 
 export function initDb() {
