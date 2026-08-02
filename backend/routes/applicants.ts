@@ -1,7 +1,7 @@
 import { requireAuth } from "../middleware";
 import { db } from "../db";
 import type { BunRequest, Applicant, EmailLog, CSVResult } from "../schema";
-import { sendPaymentConfirmationEmail, sendReminderEmail } from "../email";
+import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail } from "../email";
 import { randomUUID } from "crypto";
 
 function logEmail(applicant_id: string, type: EmailLog["type"]) {
@@ -103,6 +103,18 @@ export const applicantRoutes = {
       const sent = results.filter(r => r.status === "fulfilled").length;
       const failed = results.filter(r => r.status === "rejected").length;
       return Response.json({ sent, failed });
+    },
+  },
+
+  "/api/terms/:id/applicants/:applicantId/registration-email": {
+    async POST(req: Request) {
+      await requireAuth(req);
+      const { applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
+      const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant | undefined;
+      if (!applicant) return Response.json({ error: "Not found" }, { status: 404 });
+      await sendRegistrationEmail(applicant.email, applicant.parent_name, applicant.child_name);
+      logEmail(applicant.id, "registration");
+      return Response.json({ ok: true });
     },
   },
 
