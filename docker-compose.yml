@@ -2,6 +2,8 @@ services:
   app:
     build: .
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     env_file: .env
     environment:
       - POCKETID_REDIRECT_URI=https://${COOLIFY_FQDN}/api/auth/callback
@@ -9,23 +11,11 @@ services:
     volumes:
       - db:/app/data
     networks:
-      - coolify
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.beiratkozas.rule=Host(`${COOLIFY_FQDN}`)
-      - traefik.http.routers.beiratkozas.entrypoints=https
-      - traefik.http.routers.beiratkozas.tls=true
-      - traefik.http.services.beiratkozas.loadbalancer.server.port=3000
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/auth/verify"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - app
 
 volumes:
   db:
 
 networks:
-  coolify:
-    external: true
+  app:
+    driver: bridge
