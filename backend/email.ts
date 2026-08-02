@@ -5,6 +5,8 @@ import bannerPath from "./email-banner.png" with { type: "file" };
 // @ts-ignore
 import reminderBannerPath from "./email-reminder-banner.png" with { type: "file" };
 // @ts-ignore
+import registrationBannerPath from "./email-registration-banner.png" with { type: "file" };
+// @ts-ignore
 import footerPath from "./email-footer.png" with { type: "file" };
 
 const transporter = nodemailer.createTransport({
@@ -18,6 +20,7 @@ async function loadAssets() {
   return {
     banner: Buffer.from(await Bun.file(bannerPath).arrayBuffer()),
     reminderBanner: Buffer.from(await Bun.file(reminderBannerPath).arrayBuffer()),
+    registrationBanner: Buffer.from(await Bun.file(registrationBannerPath).arrayBuffer()),
     footer: Buffer.from(await Bun.file(footerPath).arrayBuffer()),
   };
 }
@@ -63,17 +66,23 @@ export async function sendRegistrationEmail(to: string, parentName: string, chil
   const html = template(`
     <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
     <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
-      Köszönjük, hogy beküldted <strong>${childName}</strong> beiratkozási jelentkezését a Gigászok Sportegyesülethez!
+      Köszönjük jelentkezésed a 2026/27-es tanévre a Gigászok Sportegyesület úszó szakosztályába.
     </p>
     <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
-      A beiratkozás véglegesítéséhez kérjük, utald el az 5 000 Ft-os szakosztályi hozzájárulást az alábbi bankszámlára:
+      Jelentkezésed egy 5.000&nbsp;Ft-os szakosztályi hozzájárulással tudod megerősíteni,
+      amely természetesen a szeptemberi szakosztályi hozzájárulásból jóváírásra kerül.
     </p>
     <table style="background:#f0f4ff;border-radius:8px;padding:16px 20px;margin:16px 0;width:100%;box-sizing:border-box;">
-      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Közlemény:</strong> Adomány - ${childName}</td></tr>
-      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Összeg:</strong> 5 000 Ft</td></tr>
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Bankszámlaszám:</strong> 62100140 - 11035408 - 00000000</td></tr>
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Kedvezményezett:</strong> Gigászok Sportegyesület</td></tr>
+      <tr><td style="color:#1B2B6B;font-size:14px;padding:4px 0;"><strong>Közlemény:</strong> Támogatás - ${childName}</td></tr>
     </table>
+    <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 12px;">
+      A regisztráció megerősítésére azért van szükség, mert csoportjaink évről évre túltelítettek,
+      és ezúton szeretnénk helyet biztosítani a valóban motivált és elkötelezett jelentkezőknek.
+    </p>
     <p style="color:#333;font-size:15px;line-height:1.6;margin:0;">
-      Az utalás megérkezése után e-mailben visszaigazoljuk a beiratkozást. Várunk szeptemberben úszni!
+      A tanévvel kapcsolatos további információkat erre az e-mail címre fogod megkapni. Csobbanj velünk szeptemberben!
     </p>
   `);
 
@@ -83,7 +92,7 @@ export async function sendRegistrationEmail(to: string, parentName: string, chil
     subject: `Beiratkozási jelentkezés beérkezett – ${childName}`,
     html,
     attachments: [
-      { filename: "beiratkozas.png", content: assets.banner, cid: "banner" },
+      { filename: "beiratkozas.png", content: assets.registrationBanner, cid: "banner" },
       { filename: "footer.png", content: assets.footer, cid: "footer" },
     ],
   });
