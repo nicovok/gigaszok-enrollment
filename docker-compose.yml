@@ -1,8 +1,8 @@
 services:
   app:
     build: .
-    ports:
-      - "${PORT:-3000}:3000"
+    expose:
+      - "3000"
     env_file: .env
     environment:
       - POCKETID_REDIRECT_URI=https://${COOLIFY_FQDN}/api/auth/callback
