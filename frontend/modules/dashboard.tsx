@@ -55,14 +55,26 @@ type Props = {
   onLogout: () => void;
 };
 
-function apiFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  return fetch(path, {
+class ApiError extends Error {
+  constructor(public status: number, public body: string) {
+    super(`HTTP ${status}`);
+  }
+}
+
+async function apiFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
+  const r = await fetch(path, {
     ...options,
     headers: { ...(options?.headers ?? {}), Authorization: `Bearer ${token}` },
-  }).then(r => {
-    if (!r.ok) throw new Error(`${r.status}`);
-    return r.json() as Promise<T>;
   });
+  if (!r.ok) {
+    if (r.status === 401) {
+      localStorage.removeItem("token");
+      window.location.reload();
+    }
+    const body = await r.text().catch(() => "");
+    throw new ApiError(r.status, body);
+  }
+  return r.json() as Promise<T>;
 }
 
 function formatDate(ts: number) {
@@ -205,8 +217,12 @@ export default function Dashboard({ token, user, onLogout }: Props) {
       setNewTermSlug("");
       setTermError("");
       await fetchTerms();
-    } catch {
-      setTermError("A slug már foglalt, vagy hiba történt.");
+    } catch (e) {
+      if (e instanceof ApiError) {
+        setTermError(e.status === 409 ? "Ez a slug már foglalt." : `Hiba (${e.status}): ${e.body}`);
+      } else {
+        setTermError("Ismeretlen hiba történt.");
+      }
     }
   }
 
