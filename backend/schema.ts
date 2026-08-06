@@ -39,6 +39,8 @@ export type EmailLog = {
 
 export type EmailTemplateType = "registration" | "reminder" | "payment_confirmation";
 
+export type WebhookEventType = "registration" | "payment" | "reminder";
+
 export type EmailTemplate = {
   id: string;
   term_id: string;
@@ -46,6 +48,15 @@ export type EmailTemplate = {
   subject: string;
   body: string;
   banner_path: string | null;
+  created_at: number;
+};
+
+export type OutgoingWebhook = {
+  id: string;
+  term_id: string;
+  event: WebhookEventType;
+  url: string;
+  auth_header: string | null;
   created_at: number;
 };
 

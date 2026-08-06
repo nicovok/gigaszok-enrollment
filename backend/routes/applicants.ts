@@ -2,9 +2,10 @@ import { requireAuth } from "../middleware";
 import { db } from "../db";
 import type { BunRequest, Applicant, EmailLog, EmailTemplate, CSVResult } from "../schema";
 import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
+import { fireWebhook } from "../webhook-caller";
 import { randomUUID } from "crypto";
 
-function getTemplate(termId: string, type: EmailTemplate["type"]) {
+export function getTemplate(termId: string, type: EmailTemplate["type"]) {
   return db.prepare(`SELECT * FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as EmailTemplate | null ?? undefined;
 }
 
@@ -85,6 +86,7 @@ export const applicantRoutes = {
           sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, tpl)
             .then(() => logEmail(applicant.id, "payment_confirmation"))
             .catch(err => console.error("[email] failed:", err));
+          fireWebhook(termId, "payment", applicant);
         }
       }
       return Response.json({ ok: true });
@@ -131,7 +133,7 @@ export const applicantRoutes = {
       const results = await Promise.allSettled(
         unpaid.map(a =>
           sendReminderEmail(a.email, a.parent_name, a.child_name, tpl)
-            .then(() => logEmail(a.id, "reminder"))
+            .then(() => { logEmail(a.id, "reminder"); fireWebhook(termId, "reminder", a); })
         )
       );
       const sent = results.filter(r => r.status === "fulfilled").length;
@@ -160,9 +162,11 @@ export const applicantRoutes = {
       const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant | undefined;
       if (!applicant) return Response.json({ error: "Not found" }, { status: 404 });
       if (applicant.paid) return Response.json({ error: "Already paid" }, { status: 400 });
-      const reminderTpl = getTemplate((req as BunRequest<{ id: string; applicantId: string }>).params.id, "reminder");
+      const { id: termId2, applicantId: _ } = (req as BunRequest<{ id: string; applicantId: string }>).params;
+      const reminderTpl = getTemplate(termId2, "reminder");
       await sendReminderEmail(applicant.email, applicant.parent_name, applicant.child_name, reminderTpl);
       logEmail(applicant.id, "reminder");
+      fireWebhook(termId2, "reminder", applicant);
       return Response.json({ ok: true });
     },
   },
@@ -213,6 +217,7 @@ export const applicantRoutes = {
               sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, csvTpl)
                 .then(() => logEmail(applicant.id, "payment_confirmation"))
                 .catch(err => console.error("[email] payment confirmation send failed:", err));
+              fireWebhook(termId, "payment", applicant);
             }
             break;
           }
