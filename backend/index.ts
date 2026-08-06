@@ -5,6 +5,7 @@ import { AuthError } from "./middleware";
 import { authRoutes } from "./routes/auth";
 import { termRoutes } from "./routes/terms";
 import { applicantRoutes } from "./routes/applicants";
+import { emailTemplateRoutes } from "./routes/email-templates";
 import { webhookRoutes } from "./routes/webhook";
 import frontend from "../frontend/index.html";
 
@@ -18,6 +19,7 @@ const server = Bun.serve({
     ...authRoutes,
     ...termRoutes,
     ...applicantRoutes,
+    ...emailTemplateRoutes,
     ...webhookRoutes,
   },
   error(err) {

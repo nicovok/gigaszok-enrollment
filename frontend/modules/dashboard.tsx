@@ -3,11 +3,11 @@ import {
   AppShell, Group, Title, Button, Select, Badge, Table,
   Text, Stack, SimpleGrid, Paper, Modal, TextInput, Textarea,
   SegmentedControl, FileButton, Alert, Loader, Center,
-  ActionIcon, Tooltip, CopyButton, Code, Avatar, Image, UnstyledButton,
+  ActionIcon, Tooltip, CopyButton, Code, Avatar, Image, UnstyledButton, Tabs,
 } from "@mantine/core";
 import {
   IconUpload, IconPlus, IconCheck, IconCopy,
-  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail, IconSend,
+  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail, IconSend, IconMailCog,
 } from "@tabler/icons-react";
 import logo from "../logo.png";
 
@@ -37,6 +37,16 @@ type CSVResult = {
   matched: number;
   updated: number;
   already_paid: number;
+};
+
+type TemplateType = "registration" | "reminder" | "payment_confirmation";
+
+type TemplateData = {
+  type: TemplateType;
+  subject: string;
+  body: string;
+  has_banner: boolean;
+  is_custom: boolean;
 };
 
 type Props = {
@@ -89,6 +99,12 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   const [newTermSlug, setNewTermSlug] = useState("");
   const [termError, setTermError] = useState("");
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [emailTplOpen, setEmailTplOpen] = useState(false);
+  const [emailTplTermId, setEmailTplTermId] = useState<string | null>(null);
+  const [emailTplLoading, setEmailTplLoading] = useState(false);
+  const [emailTplData, setEmailTplData] = useState<Record<string, TemplateData> | null>(null);
+  const [emailTplSaving, setEmailTplSaving] = useState<string | null>(null);
+  const [bannerKey, setBannerKey] = useState<Record<string, number>>({});
 
   const fetchTerms = useCallback(async () => {
     try {
@@ -197,6 +213,64 @@ export default function Dashboard({ token, user, onLogout }: Props) {
     } catch {
       alert("Nem törölhető: vannak jelentkezők ebben a turnusban.");
     }
+  }
+
+  async function openEmailTemplates(termId: string) {
+    setEmailTplTermId(termId);
+    setEmailTplOpen(true);
+    setEmailTplLoading(true);
+    try {
+      const data = await apiFetch<TemplateData[]>(`/api/terms/${termId}/email-templates`, token);
+      setEmailTplData(Object.fromEntries(data.map(t => [t.type, t])));
+    } finally {
+      setEmailTplLoading(false);
+    }
+  }
+
+  function updateTpl(type: string, patch: Partial<TemplateData>) {
+    setEmailTplData(prev => prev ? { ...prev, [type]: { ...prev[type], ...patch } } : prev);
+  }
+
+  async function saveEmailTemplate(type: string) {
+    if (!emailTplTermId || !emailTplData) return;
+    setEmailTplSaving(type);
+    try {
+      const tpl = emailTplData[type];
+      await apiFetch(`/api/terms/${emailTplTermId}/email-templates/${type}`, token, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: tpl.subject, body: tpl.body }),
+      });
+      updateTpl(type, { is_custom: true });
+    } finally {
+      setEmailTplSaving(null);
+    }
+  }
+
+  async function resetEmailTemplate(type: string) {
+    if (!emailTplTermId) return;
+    await apiFetch(`/api/terms/${emailTplTermId}/email-templates/${type}`, token, { method: "DELETE" });
+    const data = await apiFetch<Array<TemplateData & { body_after: string | null }>>(`/api/terms/${emailTplTermId}/email-templates`, token);
+    setEmailTplData(Object.fromEntries(data.map(t => [t.type, { ...t, body_after: t.body_after ?? "" }])));
+  }
+
+  async function uploadBanner(type: string, file: File) {
+    if (!emailTplTermId) return;
+    const form = new FormData();
+    form.append("file", file);
+    await fetch(`/api/terms/${emailTplTermId}/email-templates/${type}/banner`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    updateTpl(type, { has_banner: true });
+    setBannerKey(prev => ({ ...prev, [type]: Date.now() }));
+  }
+
+  async function deleteBanner(type: string) {
+    if (!emailTplTermId) return;
+    await apiFetch(`/api/terms/${emailTplTermId}/email-templates/${type}/banner`, token, { method: "DELETE" });
+    updateTpl(type, { has_banner: false });
   }
 
   const selectedTerm = terms.find(t => t.id === selectedTermId);
@@ -520,7 +594,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
         opened={termsModalOpen}
         onClose={() => { setTermsModalOpen(false); setTermError(""); }}
         title="Turnusok kezelése"
-        size="xl"
+        size="90%"
       >
         <Stack gap="md">
           {/* Existing terms */}
@@ -532,6 +606,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                   <Table.Th>Webhook slug</Table.Th>
                   <Table.Th>Secret</Table.Th>
                   <Table.Th>Státusz</Table.Th>
+                  <Table.Th>Email sablonok</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -562,6 +637,17 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                       <Badge color={t.active ? "green" : "gray"} variant="light">
                         {t.active ? "Aktív" : "Inaktív"}
                       </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Tooltip label="Email sablonok szerkesztése">
+                        <ActionIcon
+                          variant="subtle"
+                          color="blue"
+                          onClick={() => openEmailTemplates(t.id)}
+                        >
+                          <IconMailCog size={16} />
+                        </ActionIcon>
+                      </Tooltip>
                     </Table.Td>
                     <Table.Td>
                       <Group gap={4}>
@@ -793,6 +879,99 @@ export default function Dashboard({ token, user, onLogout }: Props) {
               </Button>
             </Group>
           </Stack>
+        )}
+      </Modal>
+
+      {/* Email templates modal */}
+      <Modal
+        opened={emailTplOpen}
+        onClose={() => setEmailTplOpen(false)}
+        title={`Email sablonok – ${terms.find(t => t.id === emailTplTermId)?.name ?? ""}`}
+        size="xl"
+      >
+        {emailTplLoading ? (
+          <Center py="xl"><Loader /></Center>
+        ) : emailTplData && (
+          <Tabs defaultValue="registration">
+            <Tabs.List>
+              <Tabs.Tab value="registration" leftSection={<IconMail size={14} />}>Visszaigazolás</Tabs.Tab>
+              <Tabs.Tab value="reminder" leftSection={<IconBell size={14} />}>Emlékeztető</Tabs.Tab>
+              <Tabs.Tab value="payment_confirmation" leftSection={<IconCheck size={14} />}>Befizetés</Tabs.Tab>
+            </Tabs.List>
+
+            {(["registration", "reminder", "payment_confirmation"] as TemplateType[]).map(type => {
+              const tpl = emailTplData[type];
+              if (!tpl) return null;
+              const hasBox = type !== "payment_confirmation";
+              return (
+                <Tabs.Panel key={type} value={type} pt="md">
+                  <Stack gap="md">
+                    <Paper withBorder p="sm" radius="md">
+                      <Stack gap="xs">
+                        <Text fw={500} size="sm">Borítókép</Text>
+                        {tpl.has_banner ? (
+                          <Group align="flex-start">
+                            <img
+                              key={bannerKey[type] ?? 0}
+                              src={`/api/terms/${emailTplTermId}/email-templates/${type}/banner`}
+                              style={{ maxHeight: 80, borderRadius: 4, display: "block" }}
+                            />
+                            <Button size="xs" color="red" variant="subtle" onClick={() => deleteBanner(type)}>
+                              Törlés
+                            </Button>
+                          </Group>
+                        ) : (
+                          <Badge color="gray" variant="light">Nincs – a logo jelenik meg</Badge>
+                        )}
+                        <FileButton onChange={file => file && uploadBanner(type, file)} accept="image/*">
+                          {props => (
+                            <Button {...props} variant="light" size="xs" leftSection={<IconUpload size={14} />} w="fit-content">
+                              {tpl.has_banner ? "Csere" : "Kép feltöltése"}
+                            </Button>
+                          )}
+                        </FileButton>
+                      </Stack>
+                    </Paper>
+
+                    <TextInput
+                      label="Tárgy"
+                      value={tpl.subject}
+                      onChange={e => updateTpl(type, { subject: e.currentTarget.value })}
+                    />
+
+                    <Textarea
+                      label="Szöveg"
+                      value={tpl.body}
+                      onChange={e => updateTpl(type, { body: e.currentTarget.value })}
+                      minRows={6}
+                      autosize
+                    />
+
+                    <Text size="xs" c="dimmed">
+                      Változók: <Code>{"{child_name}"}</Code> – résztvevő neve, <Code>{"{parent_name}"}</Code> – szülő neve
+                      {hasBox && <>, <Code>{"{bank_adatok}"}</Code> – banki adatok box (számlaszám, közlemény)</>}
+                    </Text>
+
+                    <Group justify="space-between">
+                      {tpl.is_custom && (
+                        <Button size="xs" variant="subtle" color="gray" onClick={() => resetEmailTemplate(type)}>
+                          Szöveg visszaállítása
+                        </Button>
+                      )}
+                      <Button
+                        ml="auto"
+                        size="sm"
+                        loading={emailTplSaving === type}
+                        onClick={() => saveEmailTemplate(type)}
+                      >
+                        Mentés
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Tabs.Panel>
+              );
+            })}
+          </Tabs>
         )}
       </Modal>
 

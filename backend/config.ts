@@ -1,3 +1,5 @@
+import { dirname } from "node:path";
+
 function require(key: string): string {
   const value = Bun.env[key];
   if (!value) throw new Error(`Missing required environment variable: ${key}`);
@@ -5,6 +7,7 @@ function require(key: string): string {
 }
 
 export const config = {
+  dataDir: dirname(Bun.env.DB_PATH ?? "./beiratkozas.db"),
   port: parseInt(Bun.env.PORT ?? "3000"),
   jwtSecret: require("JWT_SECRET"),
   smtp: {
