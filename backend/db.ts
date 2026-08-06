@@ -30,6 +30,17 @@ export function initDb() {
       FOREIGN KEY(applicant_id) REFERENCES applicants(id)
     );
 
+    CREATE TABLE IF NOT EXISTS outgoing_webhooks (
+      id TEXT PRIMARY KEY,
+      term_id TEXT NOT NULL,
+      event TEXT NOT NULL,
+      url TEXT NOT NULL,
+      auth_header TEXT,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(term_id) REFERENCES terms(id),
+      UNIQUE(term_id, event)
+    );
+
     CREATE TABLE IF NOT EXISTS email_templates (
       id TEXT PRIMARY KEY,
       term_id TEXT NOT NULL,

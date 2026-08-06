@@ -3,11 +3,11 @@ import {
   AppShell, Group, Title, Button, Select, Badge, Table,
   Text, Stack, SimpleGrid, Paper, Modal, TextInput, Textarea,
   SegmentedControl, FileButton, Alert, Loader, Center,
-  ActionIcon, Tooltip, CopyButton, Code, Avatar, Image, UnstyledButton, Tabs,
+  ActionIcon, Tooltip, CopyButton, Code, Avatar, Image, UnstyledButton, Tabs, PasswordInput,
 } from "@mantine/core";
 import {
   IconUpload, IconPlus, IconCheck, IconCopy,
-  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail, IconSend, IconMailCog,
+  IconAlertCircle, IconEdit, IconTrash, IconBell, IconHistory, IconMail, IconSend, IconMailCog, IconWebhook,
 } from "@tabler/icons-react";
 import logo from "../logo.png";
 
@@ -99,6 +99,11 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   const [newTermSlug, setNewTermSlug] = useState("");
   const [termError, setTermError] = useState("");
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [webhookOpen, setWebhookOpen] = useState(false);
+  const [webhookTermId, setWebhookTermId] = useState<string | null>(null);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookData, setWebhookData] = useState<Record<string, { url: string; auth_header: string }> | null>(null);
+  const [webhookSaving, setWebhookSaving] = useState<string | null>(null);
   const [emailTplOpen, setEmailTplOpen] = useState(false);
   const [emailTplTermId, setEmailTplTermId] = useState<string | null>(null);
   const [emailTplLoading, setEmailTplLoading] = useState(false);
@@ -213,6 +218,42 @@ export default function Dashboard({ token, user, onLogout }: Props) {
     } catch {
       alert("Nem törölhető: vannak jelentkezők ebben a turnusban.");
     }
+  }
+
+  async function openWebhooks(termId: string) {
+    setWebhookTermId(termId);
+    setWebhookOpen(true);
+    setWebhookLoading(true);
+    try {
+      const data = await apiFetch<Array<{ event: string; url: string; auth_header: string }>>(`/api/terms/${termId}/outgoing-webhooks`, token);
+      setWebhookData(Object.fromEntries(data.map(d => [d.event, { url: d.url, auth_header: d.auth_header }])));
+    } finally {
+      setWebhookLoading(false);
+    }
+  }
+
+  function updateWebhook(event: string, patch: { url?: string; auth_header?: string }) {
+    setWebhookData(prev => prev ? { ...prev, [event]: { ...prev[event], ...patch } } : prev);
+  }
+
+  async function saveWebhook(event: string) {
+    if (!webhookTermId || !webhookData) return;
+    setWebhookSaving(event);
+    try {
+      await apiFetch(`/api/terms/${webhookTermId}/outgoing-webhooks/${event}`, token, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(webhookData[event]),
+      });
+    } finally {
+      setWebhookSaving(null);
+    }
+  }
+
+  async function deleteWebhook(event: string) {
+    if (!webhookTermId) return;
+    await apiFetch(`/api/terms/${webhookTermId}/outgoing-webhooks/${event}`, token, { method: "DELETE" });
+    updateWebhook(event, { url: "", auth_header: "" });
   }
 
   async function openEmailTemplates(termId: string) {
@@ -606,7 +647,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                   <Table.Th>Webhook slug</Table.Th>
                   <Table.Th>Secret</Table.Th>
                   <Table.Th>Státusz</Table.Th>
-                  <Table.Th>Email sablonok</Table.Th>
+                  <Table.Th>Eszközök</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -639,15 +680,18 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                       </Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Tooltip label="Email sablonok szerkesztése">
-                        <ActionIcon
-                          variant="subtle"
-                          color="blue"
-                          onClick={() => openEmailTemplates(t.id)}
-                        >
-                          <IconMailCog size={16} />
-                        </ActionIcon>
-                      </Tooltip>
+                      <Group gap={4}>
+                        <Tooltip label="Email sablonok">
+                          <ActionIcon variant="subtle" color="blue" onClick={() => openEmailTemplates(t.id)}>
+                            <IconMailCog size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Kimenő webhookok">
+                          <ActionIcon variant="subtle" color="violet" onClick={() => openWebhooks(t.id)}>
+                            <IconWebhook size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </Group>
                     </Table.Td>
                     <Table.Td>
                       <Group gap={4}>
@@ -878,6 +922,67 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                 Törlés
               </Button>
             </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Outgoing webhooks modal */}
+      <Modal
+        opened={webhookOpen}
+        onClose={() => setWebhookOpen(false)}
+        title={`Kimenő webhookok – ${terms.find(t => t.id === webhookTermId)?.name ?? ""}`}
+        size="lg"
+      >
+        {webhookLoading ? (
+          <Center py="xl"><Loader /></Center>
+        ) : webhookData && (
+          <Stack gap="md">
+            {([
+              { event: "registration", label: "Beiratkozás", color: "blue" },
+              { event: "payment", label: "Befizetés", color: "green" },
+              { event: "reminder", label: "Emlékeztető", color: "orange" },
+            ] as const).map(({ event, label, color }) => {
+              const cfg = webhookData[event] ?? { url: "", auth_header: "" };
+              return (
+                <Paper key={event} withBorder p="md" radius="md">
+                  <Stack gap="sm">
+                    <Group gap="xs">
+                      <Badge color={color} variant="light" size="sm">{label}</Badge>
+                    </Group>
+                    <TextInput
+                      label="Webhook URL"
+                      placeholder="https://..."
+                      value={cfg.url}
+                      onChange={e => updateWebhook(event, { url: e.currentTarget.value })}
+                    />
+                    <PasswordInput
+                      label="Authorization fejléc (opcionális)"
+                      placeholder="Bearer eyJ..."
+                      value={cfg.auth_header}
+                      onChange={e => updateWebhook(event, { auth_header: e.currentTarget.value })}
+                    />
+                    <Group justify="flex-end">
+                      {cfg.url && (
+                        <Button size="xs" color="red" variant="subtle" onClick={() => deleteWebhook(event)}>
+                          Törlés
+                        </Button>
+                      )}
+                      <Button
+                        size="xs"
+                        loading={webhookSaving === event}
+                        disabled={!cfg.url.trim()}
+                        onClick={() => saveWebhook(event)}
+                      >
+                        Mentés
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Paper>
+              );
+            })}
+            <Text size="xs" c="dimmed">
+              A webhook POST kéréssel hívódik meg JSON payload-dal: <Code>{"{ event, term_id, applicant, timestamp }"}</Code>
+            </Text>
           </Stack>
         )}
       </Modal>
