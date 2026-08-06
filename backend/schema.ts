@@ -37,6 +37,18 @@ export type EmailLog = {
   sent_at: number;
 };
 
+export type EmailTemplateType = "registration" | "reminder" | "payment_confirmation";
+
+export type EmailTemplate = {
+  id: string;
+  term_id: string;
+  type: EmailTemplateType;
+  subject: string;
+  body: string;
+  banner_path: string | null;
+  created_at: number;
+};
+
 export type CSVResult = {
   matched: number;
   updated: number;

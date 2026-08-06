@@ -1,8 +1,12 @@
 import { requireAuth } from "../middleware";
 import { db } from "../db";
-import type { BunRequest, Applicant, EmailLog, CSVResult } from "../schema";
+import type { BunRequest, Applicant, EmailLog, EmailTemplate, CSVResult } from "../schema";
 import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
 import { randomUUID } from "crypto";
+
+function getTemplate(termId: string, type: EmailTemplate["type"]) {
+  return db.prepare(`SELECT * FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as EmailTemplate | null ?? undefined;
+}
 
 function logEmail(applicant_id: string, type: EmailLog["type"]) {
   db.prepare(`INSERT INTO email_logs (id, applicant_id, type, sent_at) VALUES (?, ?, ?, ?)`)
@@ -77,7 +81,8 @@ export const applicantRoutes = {
       if (paid) {
         const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant;
         if (applicant) {
-          sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name)
+          const tpl = getTemplate(termId, "payment_confirmation");
+          sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, tpl)
             .then(() => logEmail(applicant.id, "payment_confirmation"))
             .catch(err => console.error("[email] failed:", err));
         }
@@ -122,9 +127,10 @@ export const applicantRoutes = {
         `SELECT * FROM applicants WHERE term_id = ? AND paid = 0 AND email != ''`
       ).all(termId) as Applicant[];
 
+      const tpl = getTemplate(termId, "reminder");
       const results = await Promise.allSettled(
         unpaid.map(a =>
-          sendReminderEmail(a.email, a.parent_name, a.child_name)
+          sendReminderEmail(a.email, a.parent_name, a.child_name, tpl)
             .then(() => logEmail(a.id, "reminder"))
         )
       );
@@ -140,7 +146,8 @@ export const applicantRoutes = {
       const { applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
       const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant | undefined;
       if (!applicant) return Response.json({ error: "Not found" }, { status: 404 });
-      await sendRegistrationEmail(applicant.email, applicant.parent_name, applicant.child_name);
+      const tpl = getTemplate((req as BunRequest<{ id: string; applicantId: string }>).params.id, "registration");
+      await sendRegistrationEmail(applicant.email, applicant.parent_name, applicant.child_name, tpl);
       logEmail(applicant.id, "registration");
       return Response.json({ ok: true });
     },
@@ -153,7 +160,8 @@ export const applicantRoutes = {
       const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant | undefined;
       if (!applicant) return Response.json({ error: "Not found" }, { status: 404 });
       if (applicant.paid) return Response.json({ error: "Already paid" }, { status: 400 });
-      await sendReminderEmail(applicant.email, applicant.parent_name, applicant.child_name);
+      const reminderTpl = getTemplate((req as BunRequest<{ id: string; applicantId: string }>).params.id, "reminder");
+      await sendReminderEmail(applicant.email, applicant.parent_name, applicant.child_name, reminderTpl);
       logEmail(applicant.id, "reminder");
       return Response.json({ ok: true });
     },
@@ -201,7 +209,8 @@ export const applicantRoutes = {
               db.prepare(`UPDATE applicants SET paid = 1 WHERE id = ?`).run(applicant.id);
               result.updated++;
               applicant.paid = 1;
-              sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name)
+              const csvTpl = getTemplate(termId, "payment_confirmation");
+              sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, csvTpl)
                 .then(() => logEmail(applicant.id, "payment_confirmation"))
                 .catch(err => console.error("[email] payment confirmation send failed:", err));
             }

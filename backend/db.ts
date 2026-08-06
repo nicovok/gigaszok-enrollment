@@ -30,6 +30,19 @@ export function initDb() {
       FOREIGN KEY(applicant_id) REFERENCES applicants(id)
     );
 
+    CREATE TABLE IF NOT EXISTS email_templates (
+      id TEXT PRIMARY KEY,
+      term_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      body_after TEXT,
+      banner_path TEXT,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(term_id) REFERENCES terms(id),
+      UNIQUE(term_id, type)
+    );
+
     CREATE TABLE IF NOT EXISTS applicants (
       id TEXT PRIMARY KEY,
       term_id TEXT NOT NULL,
@@ -42,4 +55,7 @@ export function initDb() {
       FOREIGN KEY(term_id) REFERENCES terms(id)
     );
   `);
+
+  // Migrations for existing databases
+  try { sqlite.exec(`ALTER TABLE email_templates ADD COLUMN banner_path TEXT`); } catch {}
 }
