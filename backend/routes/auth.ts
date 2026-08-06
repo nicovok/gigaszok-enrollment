@@ -50,9 +50,10 @@ export const authRoutes = {
   "/api/auth/verify": {
     async GET(req: Request) {
       const token = req.headers.get("Authorization")?.slice(7);
-      if (!token) return Response.json({ authenticated: false });
+      if (!token) return Response.json({ authenticated: false }, { status: 401 });
       const payload = await verifyToken(token);
-      return Response.json({ authenticated: !!payload });
+      if (!payload) return Response.json({ authenticated: false }, { status: 401 });
+      return Response.json({ authenticated: true, user: { sub: payload.sub, email: payload.email, name: payload.name } });
     },
   },
 };
