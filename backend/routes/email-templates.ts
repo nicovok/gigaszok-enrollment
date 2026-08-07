@@ -69,8 +69,25 @@ export const emailTemplateRoutes = {
     async DELETE(req: Request) {
       await requireAuth(req);
       const { id: termId, type } = (req as BunRequest<{ id: string; type: string }>).params;
-      // Keep banner_path; this only resets text content
-      db.prepare(`DELETE FROM email_templates WHERE term_id = ? AND type = ?`).run(termId, type);
+
+      if (!VALID_TYPES.includes(type as EmailTemplateType)) {
+        return Response.json({ error: "Invalid type" }, { status: 400 });
+      }
+
+      const row = db.prepare(`SELECT id, banner_path FROM email_templates WHERE term_id = ? AND type = ?`)
+        .get(termId, type) as { id: string; banner_path: string | null } | null;
+
+      if (row) {
+        if (row.banner_path) {
+          // Reset text to defaults but keep the banner
+          const def = DEFAULT_TEMPLATES[type as EmailTemplateType];
+          db.prepare(`UPDATE email_templates SET subject = ?, body = ? WHERE id = ?`)
+            .run(def.subject, def.body, row.id);
+        } else {
+          db.prepare(`DELETE FROM email_templates WHERE id = ?`).run(row.id);
+        }
+      }
+
       return Response.json({ ok: true });
     },
   },

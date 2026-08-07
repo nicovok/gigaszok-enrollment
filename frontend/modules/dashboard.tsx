@@ -122,6 +122,7 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   const [emailTplData, setEmailTplData] = useState<Record<string, TemplateData> | null>(null);
   const [emailTplSaving, setEmailTplSaving] = useState<string | null>(null);
   const [bannerKey, setBannerKey] = useState<Record<string, number>>({});
+  const [emailTplSaveStatus, setEmailTplSaveStatus] = useState<Record<string, "ok" | "err">>({});
 
   const fetchTerms = useCallback(async () => {
     try {
@@ -299,6 +300,11 @@ export default function Dashboard({ token, user, onLogout }: Props) {
         body: JSON.stringify({ subject: tpl.subject, body: tpl.body }),
       });
       updateTpl(type, { is_custom: true });
+      setEmailTplSaveStatus(prev => ({ ...prev, [type]: "ok" }));
+      setTimeout(() => setEmailTplSaveStatus(prev => { const n = { ...prev }; delete n[type]; return n; }), 2500);
+    } catch {
+      setEmailTplSaveStatus(prev => ({ ...prev, [type]: "err" }));
+      setTimeout(() => setEmailTplSaveStatus(prev => { const n = { ...prev }; delete n[type]; return n; }), 3500);
     } finally {
       setEmailTplSaving(null);
     }
@@ -307,8 +313,8 @@ export default function Dashboard({ token, user, onLogout }: Props) {
   async function resetEmailTemplate(type: string) {
     if (!emailTplTermId) return;
     await apiFetch(`/api/terms/${emailTplTermId}/email-templates/${type}`, token, { method: "DELETE" });
-    const data = await apiFetch<Array<TemplateData & { body_after: string | null }>>(`/api/terms/${emailTplTermId}/email-templates`, token);
-    setEmailTplData(Object.fromEntries(data.map(t => [t.type, { ...t, body_after: t.body_after ?? "" }])));
+    const data = await apiFetch<TemplateData[]>(`/api/terms/${emailTplTermId}/email-templates`, token);
+    setEmailTplData(Object.fromEntries(data.map(t => [t.type, t])));
   }
 
   async function uploadBanner(type: string, file: File) {
@@ -1079,14 +1085,21 @@ export default function Dashboard({ token, user, onLogout }: Props) {
                           Szöveg visszaállítása
                         </Button>
                       )}
-                      <Button
-                        ml="auto"
-                        size="sm"
-                        loading={emailTplSaving === type}
-                        onClick={() => saveEmailTemplate(type)}
-                      >
-                        Mentés
-                      </Button>
+                      <Group gap="xs" ml="auto">
+                        {emailTplSaveStatus[type] === "ok" && (
+                          <Text size="sm" c="green" fw={500}>Mentve!</Text>
+                        )}
+                        {emailTplSaveStatus[type] === "err" && (
+                          <Text size="sm" c="red" fw={500}>Mentési hiba!</Text>
+                        )}
+                        <Button
+                          size="sm"
+                          loading={emailTplSaving === type}
+                          onClick={() => saveEmailTemplate(type)}
+                        >
+                          Mentés
+                        </Button>
+                      </Group>
                     </Group>
                   </Stack>
                 </Tabs.Panel>
