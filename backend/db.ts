@@ -69,4 +69,5 @@ export function initDb() {
 
   // Migrations for existing databases
   try { sqlite.exec(`ALTER TABLE email_templates ADD COLUMN banner_path TEXT`); } catch {}
+  try { sqlite.exec(`ALTER TABLE terms ADD COLUMN webhook_secret TEXT NOT NULL DEFAULT ''`); } catch {}
 }
