@@ -88,7 +88,7 @@ export async function exchangeCodeForToken(code: string): Promise<OAuthTokenResp
   });
 
   if (!response.ok) throw new Error(`PocketID token exchange failed: ${response.status}`);
-  return response.json();
+  return response.json() as Promise<OAuthTokenResponse>;
 }
 
 export async function getUserInfo(accessToken: string): Promise<OIDCUserInfo> {
@@ -97,5 +97,5 @@ export async function getUserInfo(accessToken: string): Promise<OIDCUserInfo> {
   });
 
   if (!response.ok) throw new Error(`Failed to fetch user info: ${response.status}`);
-  return response.json();
+  return response.json() as Promise<OIDCUserInfo>;
 }

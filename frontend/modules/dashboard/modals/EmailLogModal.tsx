@@ -21,7 +21,7 @@ export function EmailLogModal({ applicant, logs, onClose }: Props) {
     <Modal opened={!!applicant} onClose={onClose} title={`Email napló – ${applicant?.child_name}`} size="md">
       <Stack gap="sm">
         {logs.length === 0 ? (
-          <Text c="dimmed" size="sm">Nem lett még email elküldve.</Text>
+          <Text c="dimmed" fz="sm">Nem lett még email elküldve.</Text>
         ) : (
           <Table>
             <Table.Thead>
@@ -38,7 +38,7 @@ export function EmailLogModal({ applicant, logs, onClose }: Props) {
                       {LOG_LABELS[log.type] ?? "Emlékeztető"}
                     </Badge>
                   </Table.Td>
-                  <Table.Td c="dimmed" size="sm">{formatDate(log.sent_at)}</Table.Td>
+                  <Table.Td c="dimmed" fz="sm">{formatDate(log.sent_at)}</Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>

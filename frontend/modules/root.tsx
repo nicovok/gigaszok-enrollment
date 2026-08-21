@@ -32,7 +32,7 @@ export default function Root() {
 
   function redirectToLogin() {
     fetch("/api/auth/login")
-      .then(r => r.json())
+      .then(r => r.json() as Promise<{ authUrl: string }>)
       .then(({ authUrl }) => { window.location.href = authUrl; });
   }
 

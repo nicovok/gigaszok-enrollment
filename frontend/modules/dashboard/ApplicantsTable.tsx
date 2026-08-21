@@ -41,16 +41,16 @@ export function ApplicantsTable({ onConfirmPaid, onConfirmRemind, onConfirmRegEm
           {filtered.length === 0 ? (
             <Table.Tr>
               <Table.Td colSpan={6}>
-                <Text c="dimmed" ta="center" py="md" size="sm">Nincs találat</Text>
+                <Text c="dimmed" ta="center" py="md" fz="sm">Nincs találat</Text>
               </Table.Td>
             </Table.Tr>
           ) : (
             filtered.map(a => (
               <Table.Tr key={a.id}>
                 <Table.Td fw={500}>{a.child_name}</Table.Td>
-                <Table.Td c="dimmed" size="sm">{a.parent_name}</Table.Td>
-                <Table.Td c="dimmed" size="sm">{a.email}</Table.Td>
-                <Table.Td c="dimmed" size="sm">{formatDate(a.created_at)}</Table.Td>
+                <Table.Td c="dimmed" fz="sm">{a.parent_name}</Table.Td>
+                <Table.Td c="dimmed" fz="sm">{a.email}</Table.Td>
+                <Table.Td c="dimmed" fz="sm">{formatDate(a.created_at)}</Table.Td>
                 <Table.Td>
                   <Badge color={a.paid ? "green" : "red"} variant="light">
                     {a.paid ? "Befizetve" : "Nincs befizetve"}
@@ -63,26 +63,26 @@ export function ApplicantsTable({ onConfirmPaid, onConfirmRemind, onConfirmRegEm
                     </Button>
                     {a.email && (
                       <Tooltip label="Beiratkozás visszaigazolás újraküldése">
-                        <ActionIcon size="sm" variant="subtle" color="blue" onClick={() => onConfirmRegEmail(a)}>
+                        <ActionIcon fz="sm" variant="subtle" color="blue" onClick={() => onConfirmRegEmail(a)}>
                           <IconMail size={14} />
                         </ActionIcon>
                       </Tooltip>
                     )}
                     {!a.paid && a.email && (
                       <Tooltip label="Emlékeztető küldése">
-                        <ActionIcon size="sm" variant="subtle" color="orange" onClick={() => onConfirmRemind(a)}>
+                        <ActionIcon fz="sm" variant="subtle" color="orange" onClick={() => onConfirmRemind(a)}>
                           <IconBell size={14} />
                         </ActionIcon>
                       </Tooltip>
                     )}
                     <Tooltip label="Törlés">
-                      <ActionIcon size="sm" variant="subtle" color="red" onClick={() => onDelete(a)}>
+                      <ActionIcon fz="sm" variant="subtle" color="red" onClick={() => onDelete(a)}>
                         <IconTrash size={14} />
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label="Email napló">
                       <ActionIcon
-                        size="sm"
+                        fz="sm"
                         variant="subtle"
                         color="gray"
                         onClick={async () => {
