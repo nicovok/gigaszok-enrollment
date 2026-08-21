@@ -1,4 +1,4 @@
-# Beiratkozás — Gigászok Sportegyesület
+# Gigászok SE Enrollment
 
 Enrollment management system built for Gigászok Sportegyesület.
 
