@@ -38,8 +38,10 @@ export type EmailLog = {
 };
 
 export type EmailTemplateType = "registration" | "reminder" | "payment_confirmation";
+export const EMAIL_TEMPLATE_TYPES = ["registration", "reminder", "payment_confirmation"] as const satisfies readonly EmailTemplateType[];
 
 export type WebhookEventType = "registration" | "payment" | "reminder";
+export const WEBHOOK_EVENTS = ["registration", "payment", "reminder"] as const satisfies readonly WebhookEventType[];
 
 export type EmailTemplate = {
   id: string;

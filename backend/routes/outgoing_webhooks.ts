@@ -1,9 +1,8 @@
 import { requireAuth } from "../middleware";
 import { db } from "../db";
 import type { BunRequest, OutgoingWebhook, WebhookEventType } from "../schema";
+import { WEBHOOK_EVENTS } from "../schema";
 import { randomUUID } from "crypto";
-
-const VALID_EVENTS: WebhookEventType[] = ["registration", "payment", "reminder"];
 
 export const outgoingWebhookRoutes = {
   "/api/terms/:id/outgoing-webhooks": {
@@ -14,7 +13,7 @@ export const outgoingWebhookRoutes = {
       const stored = db.prepare(`SELECT * FROM outgoing_webhooks WHERE term_id = ?`).all(termId) as OutgoingWebhook[];
       const byEvent = Object.fromEntries(stored.map(h => [h.event, h]));
 
-      return Response.json(VALID_EVENTS.map(event => ({
+      return Response.json(WEBHOOK_EVENTS.map(event => ({
         event,
         url: byEvent[event]?.url ?? "",
         auth_header: byEvent[event]?.auth_header ?? "",
@@ -27,7 +26,7 @@ export const outgoingWebhookRoutes = {
       await requireAuth(req);
       const { id: termId, event } = (req as BunRequest<{ id: string; event: string }>).params;
 
-      if (!VALID_EVENTS.includes(event as WebhookEventType)) {
+      if (!WEBHOOK_EVENTS.includes(event as WebhookEventType)) {
         return Response.json({ error: "Invalid event" }, { status: 400 });
       }
 

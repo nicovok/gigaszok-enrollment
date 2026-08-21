@@ -1,12 +1,13 @@
 import { Modal, Stack, Paper, Badge, Group, TextInput, PasswordInput, Button, Text, Code, Center, Loader } from "@mantine/core";
 import { useWebhookStore } from "@/stores/use_webhook_store";
 import { useTermStore } from "@/stores/use_term_store";
+import type { WebhookEventType } from "@/types";
 
-const EVENTS = [
+const EVENTS: Array<{ event: WebhookEventType; label: string; color: string }> = [
   { event: "registration", label: "Beiratkozás", color: "blue" },
   { event: "payment", label: "Befizetés", color: "green" },
   { event: "reminder", label: "Emlékeztető", color: "orange" },
-] as const;
+];
 
 export function WebhooksModal() {
   const { open, termId, loading, data, saving, closeModal, update, save, remove } = useWebhookStore();
