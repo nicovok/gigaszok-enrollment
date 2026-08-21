@@ -1,5 +1,5 @@
+import { useState } from "react";
 import { Modal, Stack, Text, Group, Button } from "@mantine/core";
-import { apiFetch } from "@/lib/api";
 import { useApplicantStore } from "@/stores/use_applicant_store";
 import { useTermStore } from "@/stores/use_term_store";
 import type { Applicant } from "@/types";
@@ -9,6 +9,7 @@ type ApplicantModalProps = { applicant: Applicant | null; onClose: () => void };
 export function ConfirmPaidModal({ applicant, onClose }: ApplicantModalProps) {
   const { togglePaid } = useApplicantStore();
   const { selectedTermId } = useTermStore();
+  const [loading, setLoading] = useState(false);
 
   return (
     <Modal
@@ -29,7 +30,12 @@ export function ConfirmPaidModal({ applicant, onClose }: ApplicantModalProps) {
             <Button variant="subtle" color="gray" onClick={onClose}>Mégse</Button>
             <Button
               color={applicant.paid ? "red" : "green"}
-              onClick={async () => { await togglePaid(applicant, selectedTermId!); onClose(); }}
+              loading={loading}
+              onClick={async () => {
+                setLoading(true);
+                try { await togglePaid(applicant, selectedTermId!); onClose(); }
+                finally { setLoading(false); }
+              }}
             >
               {applicant.paid ? "Visszavon" : "Igen, befizetve"}
             </Button>
@@ -41,7 +47,9 @@ export function ConfirmPaidModal({ applicant, onClose }: ApplicantModalProps) {
 }
 
 export function ConfirmRemindModal({ applicant, onClose }: ApplicantModalProps) {
+  const { sendReminder } = useApplicantStore();
   const { selectedTermId } = useTermStore();
+  const [loading, setLoading] = useState(false);
 
   return (
     <Modal opened={!!applicant} onClose={onClose} title="Emlékeztető küldése" size="sm">
@@ -54,9 +62,11 @@ export function ConfirmRemindModal({ applicant, onClose }: ApplicantModalProps) 
             <Button variant="subtle" color="gray" onClick={onClose}>Mégse</Button>
             <Button
               color="orange"
+              loading={loading}
               onClick={async () => {
-                await apiFetch(`/api/terms/${selectedTermId}/applicants/${applicant.id}/remind`, { method: "POST" });
-                onClose();
+                setLoading(true);
+                try { await sendReminder(applicant.id, selectedTermId!); onClose(); }
+                finally { setLoading(false); }
               }}
             >
               Küldés
@@ -69,7 +79,9 @@ export function ConfirmRemindModal({ applicant, onClose }: ApplicantModalProps) 
 }
 
 export function ConfirmRegEmailModal({ applicant, onClose }: ApplicantModalProps) {
+  const { sendRegistrationEmail } = useApplicantStore();
   const { selectedTermId } = useTermStore();
+  const [loading, setLoading] = useState(false);
 
   return (
     <Modal opened={!!applicant} onClose={onClose} title="Beiratkozás visszaigazolás küldése" size="sm">
@@ -82,9 +94,11 @@ export function ConfirmRegEmailModal({ applicant, onClose }: ApplicantModalProps
             <Button variant="subtle" color="gray" onClick={onClose}>Mégse</Button>
             <Button
               color="blue"
+              loading={loading}
               onClick={async () => {
-                await apiFetch(`/api/terms/${selectedTermId}/applicants/${applicant.id}/registration-email`, { method: "POST" });
-                onClose();
+                setLoading(true);
+                try { await sendRegistrationEmail(applicant.id, selectedTermId!); onClose(); }
+                finally { setLoading(false); }
               }}
             >
               Küldés
@@ -99,6 +113,7 @@ export function ConfirmRegEmailModal({ applicant, onClose }: ApplicantModalProps
 export function DeleteApplicantModal({ applicant, onClose }: ApplicantModalProps) {
   const { deleteApplicant } = useApplicantStore();
   const { selectedTermId } = useTermStore();
+  const [loading, setLoading] = useState(false);
 
   return (
     <Modal opened={!!applicant} onClose={onClose} title="Jelentkezés törlése" size="sm">
@@ -111,7 +126,12 @@ export function DeleteApplicantModal({ applicant, onClose }: ApplicantModalProps
             <Button variant="subtle" color="gray" onClick={onClose}>Mégse</Button>
             <Button
               color="red"
-              onClick={async () => { await deleteApplicant(applicant.id, selectedTermId!); onClose(); }}
+              loading={loading}
+              onClick={async () => {
+                setLoading(true);
+                try { await deleteApplicant(applicant.id, selectedTermId!); onClose(); }
+                finally { setLoading(false); }
+              }}
             >
               Törlés
             </Button>

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
-import type { Applicant, CSVResult } from "@/types";
+import type { Applicant, CSVResult, EmailLog } from "@/types";
 
 interface ApplicantState {
   applicants: Applicant[];
@@ -13,6 +13,9 @@ interface ApplicantState {
   togglePaid: (applicant: Applicant, termId: string) => Promise<void>;
   deleteApplicant: (applicantId: string, termId: string) => Promise<void>;
   uploadCSV: (file: File, termId: string) => Promise<void>;
+  sendReminder: (applicantId: string, termId: string) => Promise<void>;
+  sendRegistrationEmail: (applicantId: string, termId: string) => Promise<void>;
+  fetchEmailLog: (applicantId: string, termId: string) => Promise<EmailLog[]>;
 }
 
 export const useApplicantStore = create<ApplicantState>((set) => ({
@@ -52,6 +55,18 @@ export const useApplicantStore = create<ApplicantState>((set) => ({
   deleteApplicant: async (applicantId, termId) => {
     await apiFetch(`/api/terms/${termId}/applicants/${applicantId}`, { method: "DELETE" });
     set(state => ({ applicants: state.applicants.filter(a => a.id !== applicantId) }));
+  },
+
+  sendReminder: async (applicantId, termId) => {
+    await apiFetch(`/api/terms/${termId}/applicants/${applicantId}/remind`, { method: "POST" });
+  },
+
+  sendRegistrationEmail: async (applicantId, termId) => {
+    await apiFetch(`/api/terms/${termId}/applicants/${applicantId}/registration-email`, { method: "POST" });
+  },
+
+  fetchEmailLog: async (applicantId, termId) => {
+    return apiFetch<EmailLog[]>(`/api/terms/${termId}/applicants/${applicantId}/email-log`);
   },
 
   uploadCSV: async (file, termId) => {

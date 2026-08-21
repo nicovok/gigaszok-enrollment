@@ -1,6 +1,5 @@
 import { Paper, Table, Text, Badge, Button, Group, Tooltip, ActionIcon, Center, Loader } from "@mantine/core";
 import { IconMail, IconBell, IconTrash, IconHistory } from "@tabler/icons-react";
-import { apiFetch } from "@/lib/api";
 import { useApplicantStore } from "@/stores/use_applicant_store";
 import { useTermStore } from "@/stores/use_term_store";
 import { formatDate } from "@/lib/utils";
@@ -15,7 +14,7 @@ type Props = {
 };
 
 export function ApplicantsTable({ onConfirmPaid, onConfirmRemind, onConfirmRegEmail, onDelete, onEmailLog }: Props) {
-  const { applicants, filter, loading } = useApplicantStore();
+  const { applicants, filter, loading, fetchEmailLog } = useApplicantStore();
   const { selectedTermId } = useTermStore();
 
   const filtered = applicants.filter(a =>
@@ -86,9 +85,7 @@ export function ApplicantsTable({ onConfirmPaid, onConfirmRemind, onConfirmRegEm
                         variant="subtle"
                         color="gray"
                         onClick={async () => {
-                          const logs = await apiFetch<EmailLog[]>(
-                            `/api/terms/${selectedTermId}/applicants/${a.id}/email-log`
-                          );
+                          const logs = await fetchEmailLog(a.id, selectedTermId!);
                           onEmailLog(a, logs);
                         }}
                       >
