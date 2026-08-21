@@ -1,25 +1,18 @@
 import { useEffect, useState } from "react";
 import { Center, Loader } from "@mantine/core";
 import Dashboard from "./dashboard";
-
-type User = { name: string; email: string; picture?: string };
-
-function decodeToken(token: string): User {
-  const payload = token.split(".")[1];
-  return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-}
+import { useAuthStore } from "../stores/useAuthStore";
 
 export default function Root() {
-  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+  const { token, setToken } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get("token");
     if (urlToken) {
-      localStorage.setItem("token", urlToken);
-      window.history.replaceState({}, "", window.location.pathname);
       setToken(urlToken);
+      window.history.replaceState({}, "", window.location.pathname);
       setLoading(false);
       return;
     }
@@ -31,10 +24,10 @@ export default function Root() {
 
     fetch("/api/auth/verify", { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
-        if (!res.ok) { localStorage.removeItem("token"); redirectToLogin(); }
+        if (!res.ok) { useAuthStore.getState().logout(); }
         else setLoading(false);
       })
-      .catch(() => { localStorage.removeItem("token"); redirectToLogin(); });
+      .catch(() => { useAuthStore.getState().logout(); });
   }, []);
 
   function redirectToLogin() {
@@ -43,13 +36,7 @@ export default function Root() {
       .then(({ authUrl }) => { window.location.href = authUrl; });
   }
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    window.location.href = "/api/auth/logout";
-  }
-
   if (loading) return <Center h="100vh"><Loader /></Center>;
 
-  const user = decodeToken(token!);
-  return <Dashboard token={token!} user={user} onLogout={handleLogout} />;
+  return <Dashboard />;
 }
