@@ -1,90 +1,90 @@
 # Beiratkozás — Gigászok Sportegyesület
 
-Beiratkozáskezelő rendszer a Gigászok Sportegyesület számára. A szülők egy OpnForm űrlapon jelentkeznek; az adatok n8n-en keresztül transzformálva érkeznek be webhookon, az adminisztrátor pedig a dashboardon nyomon követi a befizetéseket és triggereli a további automatizációkat.
+Enrollment management system built for Gigászok Sportegyesület. Parents fill out an OpnForm registration form; the data is transformed by an n8n workflow and pushed into the system via webhook. From there, the admin tracks registration fee payments and triggers further automations — such as issuing membership cards in the club's bérlet system.
 
-## Folyamat
+## Flow
 
 ```
-OpnForm (regisztrációs űrlap)
+OpnForm (registration form)
     ↓
-n8n (adat-transzformáció, validáció)
+n8n (data transformation, validation)
     ↓
-POST /webhooks/:slug  →  tárolt jelentkező (child_name, parent_name, email)
+POST /webhooks/:slug  →  applicant stored (child_name, parent_name, email)
     ↓
 Admin dashboard
-    ├── manuális befizetés-rögzítés
-    └── banki kivonat CSV feltöltés  →  automatikus párosítás
+    ├── manual payment toggle
+    └── bank statement CSV upload  →  automatic matching
             ↓
-        befizetés detektálva
-            ├── email értesítés a szülőnek
-            └── kimenő webhook  →  n8n / bérletrendszer / egyéb automatizáció
+        payment detected
+            ├── confirmation email to parent
+            └── outgoing webhook  →  n8n / membership system / other automations
 ```
 
-## Funkciók
+## Features
 
-- **Turnuskezelés** — több beiratkozási időszak párhuzamosan (pl. 2025/26, 2026/27), mindegyik saját webhook slug-gal
-- **OpnForm + n8n integráció** — a rendszer egy publikus webhook endpointot biztosít; az n8n workflow az OpnForm adatokat transzformálja és hívja meg
-- **Befizetés-követés kétféleképpen**
-  - Manuálisan: az admin a dashboardon egyenként állítja be
-  - Automatikusan: banki kivonat CSV feltöltésével — az átutalás közleménye (`Adomány - <gyerek neve>`) alapján O(n) Map-kereséssel párosítja a jelentkezőkkel
-- **Email értesítések** — beiratkozás visszaigazolása, befizetés visszaigazolása, emlékeztető (tömeges vagy egyéni), egyedi broadcast (szűrve: mindenki / befizető / nem fizető)
-- **Testreszabható email sablonok** — turnus-specifikus tárgy, szöveg és borítókép; változók: `{child_name}`, `{parent_name}`, `{bank_adatok}`
-- **Kimenő webhookok** — a `registration`, `payment` és `reminder` eseményekre tetszőleges URL hívható (pl. n8n workflow a bérletrendszerhez), opcionális auth headerrel
-- **Admin auth** — PocketID OIDC/OAuth2, HS256 JWT
+- **Multi-term support** — manage multiple enrollment seasons (e.g. 2025/26, 2026/27) in parallel, each with its own webhook URL slug
+- **OpnForm + n8n integration** — the system exposes a public webhook endpoint; an n8n workflow transforms the OpnForm submission and calls it
+- **Payment tracking — two ways**
+  - Manual: the admin toggles payment status per applicant in the dashboard
+  - Automatic: upload a bank statement CSV — transfer references (`Adomány - <child_name>`) are matched against applicants in O(n) time using a Map lookup
+- **Email notifications** — registration confirmation, payment confirmation, reminders (bulk or individual), custom broadcast (filtered by: all / paid / unpaid)
+- **Customisable email templates** — per-term subject, body, and banner image; template variables: `{child_name}`, `{parent_name}`, `{bank_adatok}`
+- **Outgoing webhooks** — configurable URLs called on `registration`, `payment`, and `reminder` events (e.g. triggering an n8n workflow to create a membership card), with optional auth header
+- **Admin auth** — PocketID OIDC/OAuth2, signed HS256 JWT
 
 ## Tech stack
 
-| Réteg | Technológia | Miért |
+| Layer | Technology | Why |
 |---|---|---|
-| Runtime | [Bun](https://bun.sh) | Beépített HTTP szerver, SQLite driver, TypeScript bundler — nincs Express, nincs Webpack |
-| Adatbázis | `bun:sqlite` (raw SQL) | Függőségmentes, single-file, elegendő erre a skálára |
-| Frontend | React 19 + [Mantine 7](https://mantine.dev) | Modals, notifications, form primitívek egy helyen |
-| State | [Zustand](https://zustand.docs.pmnd.rs) | Minimális store-ok; cross-store hozzáférés `getState()`-en át |
-| Email | Nodemailer + pooled SMTP | HTML email inline CID mellékletekkel (logó/footer/opcionális banner) |
+| Runtime | [Bun](https://bun.sh) | Built-in HTTP server, SQLite driver, TypeScript bundler — no Express, no Webpack |
+| Database | `bun:sqlite` (raw SQL) | Zero dependencies, single file, sufficient for this scale |
+| Frontend | React 19 + [Mantine 7](https://mantine.dev) | Modals, notifications, and form primitives out of the box |
+| State | [Zustand](https://zustand.docs.pmnd.rs) | Minimal stores; cross-store access via `getState()` without prop drilling |
+| Email | Nodemailer + pooled SMTP | HTML email with inline CID attachments (logo / footer / optional banner) |
 | Auth | [PocketID](https://github.com/stonith404/pocket-id) | Self-hosted OIDC provider |
-| Deploy | Docker (multi-stage) | Bun egyetlen statikus binárisba fordít; a végső image `debian:bookworm-slim` |
+| Deploy | Docker (multi-stage) | Bun compiles to a single static binary; final image is `debian:bookworm-slim` |
 
-## Projekt struktúra
+## Project structure
 
 ```
 backend/
-  index.ts              # Bun.serve() belépési pont, globális hibakezelő
-  db.ts                 # SQLite init, migrációk, megosztott query helperek
-  schema.ts             # TypeScript típusok + const tömbök (single source of truth)
-  config.ts             # Típusos .env olvasó
-  middleware.ts         # requireAuth() — AuthError-t dob hiba esetén
+  index.ts              # Bun.serve() entry point, global error handler
+  db.ts                 # SQLite init, migrations, shared query helpers
+  schema.ts             # TypeScript types + const arrays (single source of truth)
+  config.ts             # Typed .env reader
+  middleware.ts         # requireAuth() — throws AuthError on failure
   auth.ts               # JWT sign/verify, PocketID OIDC flow
-  payment.ts            # handlePaymentConfirmed() — email + webhook mellékhatások
-  email_log.ts          # logEmail() megosztott utility
-  csv.ts                # Pure CSV parsing (nincs I/O, nincs DB)
-  webhook_caller.ts     # fireWebhook() — kimenő webhook dispatcher
+  payment.ts            # handlePaymentConfirmed() — email + webhook side effects
+  email_log.ts          # logEmail() shared utility
+  csv.ts                # Pure CSV parsing functions (no I/O, no DB)
+  webhook_caller.ts     # fireWebhook() — outgoing webhook dispatcher
   email/
-    renderer.ts         # Pure sablon-interpolációs függvények
-    templates.ts        # Alapértelmezett email sablonok
-    assets.ts           # Logó/footer buffer betöltés + banner cache
+    renderer.ts         # Pure template interpolation functions
+    templates.ts        # Default email templates
+    assets.ts           # Logo/footer buffer loading + banner cache
     transport.ts        # Nodemailer pooled transporter
     send.ts             # sendRegistrationEmail / sendReminderEmail / …
   routes/
     auth.ts             # /api/auth/*
     terms.ts            # /api/terms CRUD
-    applicants.ts       # Jelentkező CRUD + email napló
-    messaging.ts        # Broadcast, tömeges emlékeztető, egyéni emailek
+    applicants.ts       # Applicant CRUD + email log
+    messaging.ts        # Broadcast, bulk remind, individual emails
     csv_import.ts       # POST /api/terms/:id/csv
-    email_templates.ts  # Sablon GET/PUT/DELETE + banner feltöltés
+    email_templates.ts  # Template GET/PUT/DELETE + banner upload
     outgoing_webhooks.ts
-    webhook.ts          # POST /webhooks/:slug — publikus bejövő webhook
+    webhook.ts          # POST /webhooks/:slug — public inbound webhook
 
 frontend/
-  index.tsx             # React gyökér — MantineProvider, ModalsProvider, Notifications
-  types.ts              # Frontend típusok (tükrözi a backend sémát)
+  index.tsx             # React root — MantineProvider, ModalsProvider, Notifications
+  types.ts              # Frontend types (mirroring backend schema)
   lib/
-    api.ts              # apiFetch() — auth header + 401 → logout kezelés
+    api.ts              # apiFetch() — auth header injection + 401 → logout
     utils.ts            # formatDate()
-  stores/               # Zustand store-ok (domain-enként egy)
-  modules/dashboard/    # Fő UI: header, stats bar, jelentkezők táblázat, összes modal
+  stores/               # Zustand stores (one per domain)
+  modules/dashboard/    # Main UI: header, stats bar, applicants table, all modals
 ```
 
-## Adatmodell
+## Data model
 
 ```sql
 terms              id, name, slug (unique), active, webhook_secret, created_at
@@ -95,65 +95,65 @@ email_templates    id, term_id, type, subject, body, banner_path, created_at
 outgoing_webhooks  id, term_id, event, url, auth_header, created_at
 ```
 
-Indexek: `idx_applicants_term(term_id, paid)`, `idx_email_logs_applicant(applicant_id)`.
+Indexes: `idx_applicants_term(term_id, paid)`, `idx_email_logs_applicant(applicant_id)`.
 
-## Helyi futtatás
+## Running locally
 
-**Előfeltételek:** [Bun](https://bun.sh/docs/installation) ≥ 1.1, futó [PocketID](https://github.com/stonith404/pocket-id) példány, SMTP szerver.
+**Prerequisites:** [Bun](https://bun.sh/docs/installation) ≥ 1.1, a running [PocketID](https://github.com/stonith404/pocket-id) instance, an SMTP server.
 
 ```bash
 git clone https://github.com/nicovok/gigaszok-enrollment
 cd gigaszok-enrollment
 bun install
-cp .env.example .env   # töltsd ki az értékeket
-bun run dev            # hot reload, :3000
+cp .env.example .env   # fill in values
+bun run dev            # hot reload on :3000
 ```
 
-### Környezeti változók
+### Environment variables
 
-| Változó | Leírás |
+| Variable | Description |
 |---|---|
-| `PORT` | HTTP port (alapértelmezett: `3000`) |
-| `POCKETID_CLIENT_ID` | OAuth2 client ID a PocketID-ból |
+| `PORT` | HTTP port (default: `3000`) |
+| `POCKETID_CLIENT_ID` | OAuth2 client ID from PocketID |
 | `POCKETID_CLIENT_SECRET` | OAuth2 client secret |
 | `POCKETID_REDIRECT_URI` | `https://<host>/api/auth/callback` |
-| `JWT_SECRET` | HS256 aláíró kulcs (min. 32 karakter) |
-| `SMTP_HOST` | SMTP szerver hostname |
+| `JWT_SECRET` | HS256 signing key (min. 32 chars) |
+| `SMTP_HOST` | SMTP server hostname |
 | `SMTP_PORT` | SMTP port |
-| `SMTP_USR` | SMTP felhasználónév |
-| `SMTP_PASS` | SMTP jelszó |
-| `EMAIL_FROM` | Feladó email cím |
-| `DB_PATH` | SQLite fájl elérési útja (alapértelmezett: `beiratkozas.db`) |
-| `DATA_DIR` | Feltöltött banner képek könyvtára |
+| `SMTP_USR` | SMTP username |
+| `SMTP_PASS` | SMTP password |
+| `EMAIL_FROM` | Sender address |
+| `DB_PATH` | SQLite file path (default: `beiratkozas.db`) |
+| `DATA_DIR` | Directory for uploaded banner images |
 
-### Email képek
+### Email assets
 
-Helyezd el a következő képeket a `backend/` könyvtárban:
+Place the following images in `backend/`:
 
-| Fájl | Szerepe |
+| File | Usage |
 |---|---|
-| `email-logo.png` | Az email fejlécében jelenik meg, ha nincs egyedi banner beállítva |
-| `email-footer.png` | Minden kimenő emailbe bekerül footer képként |
+| `email-logo.png` | Shown in the email header when no custom banner is set |
+| `email-footer.png` | Embedded as footer in every outgoing email |
 
-## Deploy
+## Deployment
 
 ```bash
-# Egyetlen statikus bináris
+# Build a self-contained binary
 bun build --compile backend/index.ts --outfile beiratkozas
 
-# Vagy Docker-rel
+# Or with Docker
 docker compose up -d
 ```
 
-A Docker image Bun builder stage-ben fordítja a binárist, majd `debian:bookworm-slim` runtime image-be másolja — a végső konténerben nincs sem Node, sem Bun.
+The Docker image compiles the binary in a Bun builder stage and copies it into a minimal `debian:bookworm-slim` runtime — no Node, no Bun in the final container.
 
-A frontend a Bun által induláskor kerül bundle-ölésre és a binárisból kerül kiszolgálásra SPA-ként.
+The frontend is bundled by Bun at build time and served as a static SPA from the same binary.
 
-## Bejövő webhook (n8n → rendszer)
+## Inbound webhook (n8n → system)
 
-`POST /webhooks/:slug` — publikus, auth nem szükséges.
+`POST /webhooks/:slug` — public, no auth required.
 
-Az n8n workflow az OpnForm adatokat transzformálja és ebben a formátumban hívja:
+The n8n workflow transforms the OpnForm submission and calls this endpoint with:
 
 ```json
 {
@@ -163,11 +163,11 @@ Az n8n workflow az OpnForm adatokat transzformálja és ebben a formátumban hí
 }
 ```
 
-A teljes payload `raw_json` mezőben tárolódik. A `slug` az adott turnushoz tartozó egyedi azonosító (pl. `beiratkozas2627`).
+The full payload is stored as-is in `raw_json`. The `slug` identifies the enrollment term (e.g. `beiratkozas2627`).
 
-## Kimenő webhook payload
+## Outgoing webhook payload
 
-Minden `registration`, `payment` és `reminder` eseményre a beállított URL-re kerül kiküldésre:
+Fired on `registration`, `payment`, and `reminder` events to the configured URL:
 
 ```json
 {
