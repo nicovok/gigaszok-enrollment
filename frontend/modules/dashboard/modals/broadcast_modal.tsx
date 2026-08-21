@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { Modal, Stack, SegmentedControl, TextInput, Textarea, Text, Group, Button } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
-import { apiFetch } from "@/lib/api";
-import { useTermStore } from "@/stores/use_term_store";
+import { useApplicantStore } from "@/stores/use_applicant_store";
 import { BatchSendResult } from "./batch_send_result";
 
 type Props = { opened: boolean; onClose: () => void };
 
 export function BroadcastModal({ opened, onClose }: Props) {
-  const { selectedTermId } = useTermStore();
+  const { broadcast } = useApplicantStore();
   const [filter, setFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -23,14 +22,7 @@ export function BroadcastModal({ opened, onClose }: Props) {
   async function handleSend() {
     setLoading(true);
     try {
-      const res = await apiFetch<{ sent: number; failed: number }>(
-        `/api/terms/${selectedTermId}/broadcast`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subject, body, filter }),
-        }
-      );
-      setResult(res);
+      setResult(await broadcast(subject, body, filter));
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
+import { notifications } from "@mantine/notifications";
 import type { TemplateType, TemplateData } from "@/types";
 
 interface EmailTemplateState {
@@ -8,7 +9,6 @@ interface EmailTemplateState {
   loading: boolean;
   data: Record<TemplateType, TemplateData> | null;
   saving: TemplateType | null;
-  saveStatus: Partial<Record<TemplateType, "ok" | "err">>;
   bannerKey: Partial<Record<TemplateType, number>>;
   openModal: (termId: string) => Promise<void>;
   closeModal: () => void;
@@ -25,7 +25,6 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
   loading: false,
   data: null,
   saving: null,
-  saveStatus: {},
   bannerKey: {},
 
   openModal: async (termId) => {
@@ -49,7 +48,6 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
     const { termId, data } = get();
     if (!termId || !data) return;
     set({ saving: type });
-    let status: "ok" | "err" = "err";
     try {
       const tpl = data[type];
       await apiFetch(`/api/terms/${termId}/email-templates/${type}`, {
@@ -58,18 +56,12 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
         body: JSON.stringify({ subject: tpl.subject, body: tpl.body }),
       });
       get().updateTpl(type, { is_custom: true });
-      status = "ok";
+      notifications.show({ color: "green", message: "Sablon mentve." });
     } catch {
-      // status stays "err"
+      notifications.show({ color: "red", message: "Mentési hiba!" });
     } finally {
       set({ saving: null });
     }
-    set(state => ({ saveStatus: { ...state.saveStatus, [type]: status } }));
-    setTimeout(() => set(state => {
-      const s = { ...state.saveStatus };
-      delete s[type];
-      return { saveStatus: s };
-    }), status === "ok" ? 2500 : 3500);
   },
 
   reset: async (type) => {

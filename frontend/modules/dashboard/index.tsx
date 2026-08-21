@@ -33,7 +33,7 @@ export default function Dashboard() {
 
   useEffect(() => { fetchTerms(); }, []);
   useEffect(() => {
-    if (selectedTermId) fetchApplicants(selectedTermId);
+    fetchApplicants();
   }, [selectedTermId]);
 
   const paidCount = applicants.filter(a => a.paid === 1).length;
@@ -90,7 +90,7 @@ export default function Dashboard() {
                 ]}
               />
               <Group gap="xs">
-                <FileButton onChange={file => file && uploadCSV(file, selectedTermId)} accept=".csv">
+                <FileButton onChange={file => file && uploadCSV(file)} accept=".csv">
                   {props => (
                     <Button {...props} variant="light" leftSection={<IconUpload size={15} />} loading={csvLoading}>
                       CSV feltöltés

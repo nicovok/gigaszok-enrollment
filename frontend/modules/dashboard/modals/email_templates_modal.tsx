@@ -14,7 +14,7 @@ const TEMPLATE_TABS: Array<{ value: TemplateType; label: string; icon: React.Rea
 ];
 
 export function EmailTemplatesModal() {
-  const { open, termId, loading, data, saving, saveStatus, bannerKey, closeModal, updateTpl, save, reset, uploadBanner, deleteBanner } = useEmailTemplateStore();
+  const { open, termId, loading, data, saving, bannerKey, closeModal, updateTpl, save, reset, uploadBanner, deleteBanner } = useEmailTemplateStore();
   const { terms } = useTermStore();
   const termName = terms.find(t => t.id === termId)?.name ?? "";
 
@@ -89,11 +89,7 @@ export function EmailTemplatesModal() {
                         Szöveg visszaállítása
                       </Button>
                     )}
-                    <Group gap="xs" ml="auto">
-                      {saveStatus[type] === "ok" && <Text size="sm" c="green" fw={500}>Mentve!</Text>}
-                      {saveStatus[type] === "err" && <Text size="sm" c="red" fw={500}>Mentési hiba!</Text>}
-                      <Button size="sm" loading={saving === type} onClick={() => save(type)}>Mentés</Button>
-                    </Group>
+                    <Button size="sm" ml="auto" loading={saving === type} onClick={() => save(type)}>Mentés</Button>
                   </Group>
                 </Stack>
               </Tabs.Panel>

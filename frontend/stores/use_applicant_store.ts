@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
+import { useTermStore } from "@/stores/use_term_store";
 import type { Applicant, CSVResult, EmailLog } from "@/types";
 
 interface ApplicantState {
@@ -9,13 +10,15 @@ interface ApplicantState {
   csvLoading: boolean;
   csvResult: CSVResult | null;
   setFilter: (f: "all" | "paid" | "unpaid") => void;
-  fetchApplicants: (termId: string) => Promise<void>;
-  togglePaid: (applicant: Applicant, termId: string) => Promise<void>;
-  deleteApplicant: (applicantId: string, termId: string) => Promise<void>;
-  uploadCSV: (file: File, termId: string) => Promise<void>;
-  sendReminder: (applicantId: string, termId: string) => Promise<void>;
-  sendRegistrationEmail: (applicantId: string, termId: string) => Promise<void>;
-  fetchEmailLog: (applicantId: string, termId: string) => Promise<EmailLog[]>;
+  fetchApplicants: () => Promise<void>;
+  togglePaid: (applicant: Applicant) => Promise<void>;
+  deleteApplicant: (applicantId: string) => Promise<void>;
+  uploadCSV: (file: File) => Promise<void>;
+  sendReminder: (applicantId: string) => Promise<void>;
+  sendRegistrationEmail: (applicantId: string) => Promise<void>;
+  fetchEmailLog: (applicantId: string) => Promise<EmailLog[]>;
+  broadcast: (subject: string, body: string, filter: "all" | "paid" | "unpaid") => Promise<{ sent: number; failed: number }>;
+  remindAll: () => Promise<{ sent: number; failed: number }>;
 }
 
 export const useApplicantStore = create<ApplicantState>((set) => ({
@@ -27,7 +30,9 @@ export const useApplicantStore = create<ApplicantState>((set) => ({
 
   setFilter: (filter) => set({ filter }),
 
-  fetchApplicants: async (termId) => {
+  fetchApplicants: async () => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) { set({ applicants: [] }); return; }
     set({ loading: true, csvResult: null });
     try {
       const data = await apiFetch<Applicant[]>(`/api/terms/${termId}/applicants`);
@@ -39,7 +44,9 @@ export const useApplicantStore = create<ApplicantState>((set) => ({
     }
   },
 
-  togglePaid: async (applicant, termId) => {
+  togglePaid: async (applicant) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return;
     await apiFetch(`/api/terms/${termId}/applicants/${applicant.id}/paid`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -52,24 +59,50 @@ export const useApplicantStore = create<ApplicantState>((set) => ({
     }));
   },
 
-  deleteApplicant: async (applicantId, termId) => {
+  deleteApplicant: async (applicantId) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return;
     await apiFetch(`/api/terms/${termId}/applicants/${applicantId}`, { method: "DELETE" });
     set(state => ({ applicants: state.applicants.filter(a => a.id !== applicantId) }));
   },
 
-  sendReminder: async (applicantId, termId) => {
+  sendReminder: async (applicantId) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return;
     await apiFetch(`/api/terms/${termId}/applicants/${applicantId}/remind`, { method: "POST" });
   },
 
-  sendRegistrationEmail: async (applicantId, termId) => {
+  sendRegistrationEmail: async (applicantId) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return;
     await apiFetch(`/api/terms/${termId}/applicants/${applicantId}/registration-email`, { method: "POST" });
   },
 
-  fetchEmailLog: async (applicantId, termId) => {
+  fetchEmailLog: async (applicantId) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return [];
     return apiFetch<EmailLog[]>(`/api/terms/${termId}/applicants/${applicantId}/email-log`);
   },
 
-  uploadCSV: async (file, termId) => {
+  broadcast: async (subject, body, filter) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return { sent: 0, failed: 0 };
+    return apiFetch<{ sent: number; failed: number }>(`/api/terms/${termId}/broadcast`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject, body, filter }),
+    });
+  },
+
+  remindAll: async () => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return { sent: 0, failed: 0 };
+    return apiFetch<{ sent: number; failed: number }>(`/api/terms/${termId}/remind`, { method: "POST" });
+  },
+
+  uploadCSV: async (file) => {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return;
     set({ csvLoading: true, csvResult: null });
     try {
       const form = new FormData();

@@ -1,23 +1,19 @@
 import { useState } from "react";
 import { Modal, Stack, Text, Group, Button } from "@mantine/core";
-import { apiFetch } from "@/lib/api";
-import { useTermStore } from "@/stores/use_term_store";
+import { useApplicantStore } from "@/stores/use_applicant_store";
 import { BatchSendResult } from "./batch_send_result";
 
 type Props = { opened: boolean; unpaidCount: number; onClose: () => void };
 
 export function ReminderModal({ opened, unpaidCount, onClose }: Props) {
-  const { selectedTermId } = useTermStore();
+  const { remindAll } = useApplicantStore();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
 
   async function handleSend() {
     setLoading(true);
     try {
-      const res = await apiFetch<{ sent: number; failed: number }>(
-        `/api/terms/${selectedTermId}/remind`, { method: "POST" }
-      );
-      setResult(res);
+      setResult(await remindAll());
     } finally {
       setLoading(false);
     }
