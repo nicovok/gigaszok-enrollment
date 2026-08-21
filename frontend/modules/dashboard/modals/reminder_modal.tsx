@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal, Stack, Text, Group, Button } from "@mantine/core";
 import { apiFetch } from "@/lib/api";
 import { useTermStore } from "@/stores/use_term_store";
+import { BatchSendResult } from "./batch_send_result";
 
 type Props = { opened: boolean; unpaidCount: number; onClose: () => void };
 
@@ -41,15 +42,7 @@ export function ReminderModal({ opened, unpaidCount, onClose }: Props) {
             </Group>
           </>
         ) : (
-          <>
-            <Text size="sm">
-              <strong>{result.sent}</strong> email elküldve
-              {result.failed > 0 && <>, <strong>{result.failed}</strong> sikertelen</>}.
-            </Text>
-            <Group justify="flex-end">
-              <Button onClick={handleClose}>Bezárás</Button>
-            </Group>
-          </>
+          <BatchSendResult sent={result.sent} failed={result.failed} onClose={handleClose} />
         )}
       </Stack>
     </Modal>

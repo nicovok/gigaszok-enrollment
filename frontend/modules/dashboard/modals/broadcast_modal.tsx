@@ -3,6 +3,7 @@ import { Modal, Stack, SegmentedControl, TextInput, Textarea, Text, Group, Butto
 import { IconSend } from "@tabler/icons-react";
 import { apiFetch } from "@/lib/api";
 import { useTermStore } from "@/stores/use_term_store";
+import { BatchSendResult } from "./batch_send_result";
 
 type Props = { opened: boolean; onClose: () => void };
 
@@ -83,15 +84,7 @@ export function BroadcastModal({ opened, onClose }: Props) {
             </Group>
           </>
         ) : (
-          <>
-            <Text size="sm">
-              <strong>{result.sent}</strong> email elküldve
-              {result.failed > 0 && <>, <strong>{result.failed}</strong> sikertelen</>}.
-            </Text>
-            <Group justify="flex-end">
-              <Button onClick={handleClose}>Bezárás</Button>
-            </Group>
-          </>
+          <BatchSendResult sent={result.sent} failed={result.failed} onClose={handleClose} />
         )}
       </Stack>
     </Modal>
