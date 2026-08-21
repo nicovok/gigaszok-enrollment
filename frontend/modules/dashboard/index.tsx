@@ -18,19 +18,23 @@ import { useTermStore } from "@/stores/use_term_store";
 import { useApplicantStore } from "@/stores/use_applicant_store";
 import type { Applicant, EmailLog } from "@/types";
 
+type ModalState =
+  | { type: "none" }
+  | { type: "terms" }
+  | { type: "broadcast" }
+  | { type: "remind" }
+  | { type: "confirmPaid"; applicant: Applicant }
+  | { type: "confirmRemind"; applicant: Applicant }
+  | { type: "confirmRegEmail"; applicant: Applicant }
+  | { type: "delete"; applicant: Applicant }
+  | { type: "emailLog"; applicant: Applicant; logs: EmailLog[] };
+
 export default function Dashboard() {
   const { terms, selectedTermId, fetchTerms } = useTermStore();
   const { applicants, filter, csvLoading, csvResult, setFilter, fetchApplicants, uploadCSV } = useApplicantStore();
 
-  const [termsModalOpen, setTermsModalOpen] = useState(false);
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
-  const [remindModalOpen, setRemindModalOpen] = useState(false);
-  const [confirmApplicant, setConfirmApplicant] = useState<Applicant | null>(null);
-  const [confirmRemindApplicant, setConfirmRemindApplicant] = useState<Applicant | null>(null);
-  const [deleteApplicant, setDeleteApplicant] = useState<Applicant | null>(null);
-  const [confirmRegEmailApplicant, setConfirmRegEmailApplicant] = useState<Applicant | null>(null);
-  const [logApplicant, setLogApplicant] = useState<Applicant | null>(null);
-  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  const [modal, setModal] = useState<ModalState>({ type: "none" });
+  const closeModal = () => setModal({ type: "none" });
 
   useEffect(() => { fetchTerms(); }, []);
   useEffect(() => {
@@ -44,14 +48,14 @@ export default function Dashboard() {
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
-      <Header onOpenTerms={() => setTermsModalOpen(true)} />
+      <Header onOpenTerms={() => setModal({ type: "terms" })} />
 
       <AppShell.Main maw={1100} mx="auto">
         <Stack gap="md">
           {terms.length === 0 && (
             <Alert color="blue" title="Nincs turnus" icon={<IconAlertCircle size={16} />}>
               Hozz létre egy turnust a kezdéshez.{" "}
-              <Button variant="subtle" size="xs" onClick={() => setTermsModalOpen(true)}>
+              <Button variant="subtle" size="xs" onClick={() => setModal({ type: "terms" })}>
                 Turnus létrehozása
               </Button>
             </Alert>
@@ -107,7 +111,7 @@ export default function Dashboard() {
                   variant="light"
                   color="orange"
                   disabled={unpaidCount === 0}
-                  onClick={() => setRemindModalOpen(true)}
+                  onClick={() => setModal({ type: "remind" })}
                 >
                   Emlékeztető ({unpaidCount})
                 </Button>
@@ -115,7 +119,7 @@ export default function Dashboard() {
                   variant="light"
                   color="blue"
                   leftSection={<IconSend size={15} />}
-                  onClick={() => setBroadcastOpen(true)}
+                  onClick={() => setModal({ type: "broadcast" })}
                 >
                   Egyedi email
                 </Button>
@@ -125,26 +129,30 @@ export default function Dashboard() {
 
           {selectedTermId && (
             <ApplicantsTable
-              onConfirmPaid={setConfirmApplicant}
-              onConfirmRemind={setConfirmRemindApplicant}
-              onConfirmRegEmail={setConfirmRegEmailApplicant}
-              onDelete={setDeleteApplicant}
-              onEmailLog={(a, logs) => { setLogApplicant(a); setEmailLogs(logs); }}
+              onConfirmPaid={a => setModal({ type: "confirmPaid", applicant: a })}
+              onConfirmRemind={a => setModal({ type: "confirmRemind", applicant: a })}
+              onConfirmRegEmail={a => setModal({ type: "confirmRegEmail", applicant: a })}
+              onDelete={a => setModal({ type: "delete", applicant: a })}
+              onEmailLog={(a, logs) => setModal({ type: "emailLog", applicant: a, logs })}
             />
           )}
         </Stack>
       </AppShell.Main>
 
-      <TermsModal opened={termsModalOpen} onClose={() => setTermsModalOpen(false)} />
+      <TermsModal opened={modal.type === "terms"} onClose={closeModal} />
       <WebhooksModal />
       <EmailTemplatesModal />
-      <BroadcastModal opened={broadcastOpen} onClose={() => setBroadcastOpen(false)} />
-      <ReminderModal opened={remindModalOpen} unpaidCount={unpaidCount} onClose={() => setRemindModalOpen(false)} />
-      <ConfirmPaidModal applicant={confirmApplicant} onClose={() => setConfirmApplicant(null)} />
-      <ConfirmRemindModal applicant={confirmRemindApplicant} onClose={() => setConfirmRemindApplicant(null)} />
-      <ConfirmRegEmailModal applicant={confirmRegEmailApplicant} onClose={() => setConfirmRegEmailApplicant(null)} />
-      <DeleteApplicantModal applicant={deleteApplicant} onClose={() => setDeleteApplicant(null)} />
-      <EmailLogModal applicant={logApplicant} logs={emailLogs} onClose={() => setLogApplicant(null)} />
+      <BroadcastModal opened={modal.type === "broadcast"} onClose={closeModal} />
+      <ReminderModal opened={modal.type === "remind"} unpaidCount={unpaidCount} onClose={closeModal} />
+      <ConfirmPaidModal applicant={modal.type === "confirmPaid" ? modal.applicant : null} onClose={closeModal} />
+      <ConfirmRemindModal applicant={modal.type === "confirmRemind" ? modal.applicant : null} onClose={closeModal} />
+      <ConfirmRegEmailModal applicant={modal.type === "confirmRegEmail" ? modal.applicant : null} onClose={closeModal} />
+      <DeleteApplicantModal applicant={modal.type === "delete" ? modal.applicant : null} onClose={closeModal} />
+      <EmailLogModal
+        applicant={modal.type === "emailLog" ? modal.applicant : null}
+        logs={modal.type === "emailLog" ? modal.logs : []}
+        onClose={closeModal}
+      />
     </AppShell>
   );
 }
