@@ -30,7 +30,7 @@ export function EmailTemplatesModal() {
             ))}
           </Tabs.List>
 
-          {(["registration", "reminder", "payment_confirmation"] as TemplateType[]).map(type => {
+          {TEMPLATE_TABS.map(({ value: type }) => {
             const tpl = data[type];
             if (!tpl) return null;
             const hasBox = type !== "payment_confirmation";

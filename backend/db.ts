@@ -73,6 +73,17 @@ export function initDb() {
   `);
 
   // Migrations for existing databases
-  try { sqlite.exec(`ALTER TABLE email_templates ADD COLUMN banner_path TEXT`); } catch {}
-  try { sqlite.exec(`ALTER TABLE terms ADD COLUMN webhook_secret TEXT NOT NULL DEFAULT ''`); } catch {}
+  const migrations = [
+    `ALTER TABLE email_templates ADD COLUMN banner_path TEXT`,
+    `ALTER TABLE terms ADD COLUMN webhook_secret TEXT NOT NULL DEFAULT ''`,
+  ];
+  for (const sql of migrations) {
+    try {
+      sqlite.exec(sql);
+    } catch (e) {
+      if (!(e instanceof Error && e.message.includes("duplicate column"))) {
+        console.warn("[db migration]", e);
+      }
+    }
+  }
 }

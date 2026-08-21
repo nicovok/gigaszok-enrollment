@@ -36,4 +36,5 @@ export type TemplateData = {
   is_custom: boolean;
 };
 
-export type EmailLog = { id: string; type: string; sent_at: number };
+export type EmailLogType = "registration" | "reminder" | "payment_confirmation" | "custom";
+export type EmailLog = { id: string; type: EmailLogType; sent_at: number };
