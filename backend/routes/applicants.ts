@@ -33,7 +33,6 @@ export const applicantRoutes = {
       await requireAuth(req);
       const { id: termId, applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
       const { paid } = await req.json() as { paid: boolean };
-      console.log("[paid] applicantId:", applicantId, "paid:", paid);
       db.prepare(`UPDATE applicants SET paid = ? WHERE id = ? AND term_id = ?`)
         .run(paid ? 1 : 0, applicantId, termId);
       if (paid) {
@@ -115,15 +114,14 @@ export const applicantRoutes = {
   "/api/terms/:id/applicants/:applicantId/remind": {
     async POST(req: Request) {
       await requireAuth(req);
-      const { applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
+      const { id: termId, applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
       const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant | undefined;
       if (!applicant) return Response.json({ error: "Not found" }, { status: 404 });
       if (applicant.paid) return Response.json({ error: "Already paid" }, { status: 400 });
-      const { id: termId2, applicantId: _ } = (req as BunRequest<{ id: string; applicantId: string }>).params;
-      const reminderTpl = getTemplate(termId2, "reminder");
+      const reminderTpl = getTemplate(termId, "reminder");
       await sendReminderEmail(applicant.email, applicant.parent_name, applicant.child_name, reminderTpl);
       logEmail(applicant.id, "reminder");
-      fireWebhook(termId2, "reminder", applicant);
+      fireWebhook(termId, "reminder", applicant);
       return Response.json({ ok: true });
     },
   },
