@@ -1,19 +1,10 @@
 import { requireAuth } from "../middleware";
-import { db } from "../db";
-import type { BunRequest, Applicant, EmailLog, EmailTemplate, CSVResult } from "../schema";
+import { db, getTemplate } from "../db";
+import type { BunRequest, Applicant, EmailLog, CSVResult } from "../schema";
 import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
 import { fireWebhook } from "../webhook_caller";
 import { parseCSV, isAmount5000 } from "../csv";
-import { randomUUID } from "crypto";
-
-export function getTemplate(termId: string, type: EmailTemplate["type"]) {
-  return db.prepare(`SELECT * FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as EmailTemplate | null ?? undefined;
-}
-
-function logEmail(applicant_id: string, type: EmailLog["type"]) {
-  db.prepare(`INSERT INTO email_logs (id, applicant_id, type, sent_at) VALUES (?, ?, ?, ?)`)
-    .run(randomUUID(), applicant_id, type, Date.now());
-}
+import { logEmail } from "../email_log";
 
 export const applicantRoutes = {
   "/api/terms/:id/applicants": {

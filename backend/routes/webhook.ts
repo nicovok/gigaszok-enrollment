@@ -1,8 +1,8 @@
-import { db } from "../db";
+import { db, getTemplate } from "../db";
 import type { BunRequest, Term, Applicant } from "../schema";
 import { randomUUID } from "crypto";
 import { sendRegistrationEmail } from "../email";
-import { getTemplate } from "./applicants";
+import { logEmail } from "../email_log";
 import { fireWebhook } from "../webhook_caller";
 
 export const webhookRoutes = {
@@ -45,8 +45,7 @@ export const webhookRoutes = {
       if (body.form_data !== "IMPORT") {
         const tpl = getTemplate(term.id, "registration");
         sendRegistrationEmail(email.trim(), parent_name.trim(), child_name.trim(), tpl)
-          .then(() => db.prepare(`INSERT INTO email_logs (id, applicant_id, type, sent_at) VALUES (?, ?, ?, ?)`)
-            .run(randomUUID(), id, "registration", Date.now()))
+          .then(() => logEmail(id, "registration"))
           .catch(err => console.error("[email] registration send failed:", err));
       }
 
