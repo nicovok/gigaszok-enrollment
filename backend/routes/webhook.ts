@@ -25,12 +25,18 @@ export const webhookRoutes = {
         return Response.json({ error: "Invalid JSON body" }, { status: 400 });
       }
 
-      const child_name = body.child_name as string | undefined;
-      const parent_name = (body.parent_name ?? "") as string;
-      const email = (body.email ?? "") as string;
+      const child_name = body.child_name;
+      const parent_name = body.parent_name ?? "";
+      const email = body.email ?? "";
 
-      if (!child_name || typeof child_name !== "string" || !child_name.trim()) {
-        return Response.json({ error: "Missing child_name field" }, { status: 400 });
+      if (typeof child_name !== "string" || !child_name.trim()) {
+        return Response.json({ error: "child_name must be a non-empty string" }, { status: 400 });
+      }
+      if (typeof parent_name !== "string") {
+        return Response.json({ error: "parent_name must be a string" }, { status: 400 });
+      }
+      if (typeof email !== "string") {
+        return Response.json({ error: "email must be a string" }, { status: 400 });
       }
 
       const id = randomUUID();
