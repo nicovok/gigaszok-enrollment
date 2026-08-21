@@ -26,8 +26,8 @@ export const useTermStore = create<TermState>((set, get) => ({
           ?? (data.length > 0 ? (data.find(t => t.active === 1) ?? data[0]).id : null);
         return { terms: data, selectedTermId: newSelectedId };
       });
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("[fetchTerms]", err);
     }
   },
 

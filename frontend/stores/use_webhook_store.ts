@@ -25,13 +25,14 @@ export const useWebhookStore = create<WebhookState>((set, get) => ({
 
   openModal: async (termId) => {
     set({ open: true, termId, loading: true, data: null });
-    const raw = await apiFetch<Array<{ event: string; url: string; auth_header: string }>>(
-      `/api/terms/${termId}/outgoing-webhooks`
-    );
-    set({
-      data: Object.fromEntries(raw.map(d => [d.event, { url: d.url, auth_header: d.auth_header }])),
-      loading: false,
-    });
+    try {
+      const raw = await apiFetch<Array<{ event: string; url: string; auth_header: string }>>(
+        `/api/terms/${termId}/outgoing-webhooks`
+      );
+      set({ data: Object.fromEntries(raw.map(d => [d.event, { url: d.url, auth_header: d.auth_header }])) });
+    } finally {
+      set({ loading: false });
+    }
   },
 
   closeModal: () => set({ open: false }),

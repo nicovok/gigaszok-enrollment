@@ -46,6 +46,7 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
     const { termId, data } = get();
     if (!termId || !data) return;
     set({ saving: type });
+    let status: "ok" | "err" = "err";
     try {
       const tpl = data[type];
       await apiFetch(`/api/terms/${termId}/email-templates/${type}`, {
@@ -54,22 +55,18 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
         body: JSON.stringify({ subject: tpl.subject, body: tpl.body }),
       });
       get().updateTpl(type, { is_custom: true });
-      set(state => ({ saveStatus: { ...state.saveStatus, [type]: "ok" } }));
-      setTimeout(() => set(state => {
-        const s = { ...state.saveStatus };
-        delete s[type];
-        return { saveStatus: s };
-      }), 2500);
+      status = "ok";
     } catch {
-      set(state => ({ saveStatus: { ...state.saveStatus, [type]: "err" } }));
-      setTimeout(() => set(state => {
-        const s = { ...state.saveStatus };
-        delete s[type];
-        return { saveStatus: s };
-      }), 3500);
+      // status stays "err"
     } finally {
       set({ saving: null });
     }
+    set(state => ({ saveStatus: { ...state.saveStatus, [type]: status } }));
+    setTimeout(() => set(state => {
+      const s = { ...state.saveStatus };
+      delete s[type];
+      return { saveStatus: s };
+    }), status === "ok" ? 2500 : 3500);
   },
 
   reset: async (type) => {
