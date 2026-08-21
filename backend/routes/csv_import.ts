@@ -21,27 +21,34 @@ export const csvImportRoutes = {
         `SELECT * FROM applicants WHERE term_id = ?`
       ).all(termId) as Applicant[];
 
-      const result: CSVResult = { matched: 0, updated: 0, already_paid: 0 };
+      // Index applicants by normalised name for O(1) lookup per CSV row
+      const byName = new Map(
+        applicants.map(a => [a.child_name.toLowerCase().trim(), a])
+      );
 
-      for (const applicant of applicants) {
-        const pattern = `adomány - ${applicant.child_name.toLowerCase().trim()}`;
-        for (const row of rows) {
-          const hasDescription = row.some(cell => cell.toLowerCase().trim() === pattern);
-          const hasAmount = row.some(cell => isAmount5000(cell));
-          if (hasDescription && hasAmount) {
-            result.matched++;
-            if (applicant.paid) {
-              result.already_paid++;
-            } else {
-              db.prepare(`UPDATE applicants SET paid = 1 WHERE id = ?`).run(applicant.id);
-              result.updated++;
-              applicant.paid = 1;
-              handlePaymentConfirmed(termId, applicant);
-            }
-            break;
-          }
+      const result: CSVResult = { matched: 0, updated: 0, already_paid: 0 };
+      const toConfirm: Applicant[] = [];
+
+      for (const row of rows) {
+        if (!row.some(cell => isAmount5000(cell))) continue;
+        const descCell = row.find(cell => cell.toLowerCase().trim().startsWith("adomány - "));
+        if (!descCell) continue;
+        const name = descCell.toLowerCase().trim().slice("adomány - ".length);
+        const applicant = byName.get(name);
+        if (!applicant) continue;
+
+        result.matched++;
+        if (applicant.paid) {
+          result.already_paid++;
+        } else {
+          db.prepare(`UPDATE applicants SET paid = 1 WHERE id = ?`).run(applicant.id);
+          applicant.paid = 1;
+          result.updated++;
+          toConfirm.push(applicant);
         }
       }
+
+      for (const a of toConfirm) handlePaymentConfirmed(termId, a);
 
       return Response.json(result);
     },
