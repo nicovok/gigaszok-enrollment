@@ -1,22 +1,22 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
-import type { TemplateData } from "@/types";
+import type { TemplateType, TemplateData } from "@/types";
 
 interface EmailTemplateState {
   open: boolean;
   termId: string | null;
   loading: boolean;
-  data: Record<string, TemplateData> | null;
-  saving: string | null;
-  saveStatus: Record<string, "ok" | "err">;
-  bannerKey: Record<string, number>;
+  data: Record<TemplateType, TemplateData> | null;
+  saving: TemplateType | null;
+  saveStatus: Partial<Record<TemplateType, "ok" | "err">>;
+  bannerKey: Partial<Record<TemplateType, number>>;
   openModal: (termId: string) => Promise<void>;
   closeModal: () => void;
-  updateTpl: (type: string, patch: Partial<TemplateData>) => void;
-  save: (type: string) => Promise<void>;
-  reset: (type: string) => Promise<void>;
-  uploadBanner: (type: string, file: File) => Promise<void>;
-  deleteBanner: (type: string) => Promise<void>;
+  updateTpl: (type: TemplateType, patch: Partial<TemplateData>) => void;
+  save: (type: TemplateType) => Promise<void>;
+  reset: (type: TemplateType) => Promise<void>;
+  uploadBanner: (type: TemplateType, file: File) => Promise<void>;
+  deleteBanner: (type: TemplateType) => Promise<void>;
 }
 
 export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
@@ -31,7 +31,10 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
   openModal: async (termId) => {
     set({ open: true, termId, loading: true, data: null });
     const raw = await apiFetch<TemplateData[]>(`/api/terms/${termId}/email-templates`);
-    set({ data: Object.fromEntries(raw.map(t => [t.type, t])), loading: false });
+    set({
+      data: Object.fromEntries(raw.map(t => [t.type, t])) as Record<TemplateType, TemplateData>,
+      loading: false,
+    });
   },
 
   closeModal: () => set({ open: false }),
@@ -74,7 +77,7 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
     if (!termId) return;
     await apiFetch(`/api/terms/${termId}/email-templates/${type}`, { method: "DELETE" });
     const raw = await apiFetch<TemplateData[]>(`/api/terms/${termId}/email-templates`);
-    set({ data: Object.fromEntries(raw.map(t => [t.type, t])) });
+    set({ data: Object.fromEntries(raw.map(t => [t.type, t])) as Record<TemplateType, TemplateData> });
   },
 
   uploadBanner: async (type, file) => {

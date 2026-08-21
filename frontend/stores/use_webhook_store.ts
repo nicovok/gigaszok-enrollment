@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
+import type { WebhookEventType } from "@/types";
 
 type WebhookEntry = { url: string; auth_header: string };
 
@@ -7,13 +8,13 @@ interface WebhookState {
   open: boolean;
   termId: string | null;
   loading: boolean;
-  data: Record<string, WebhookEntry> | null;
-  saving: string | null;
+  data: Record<WebhookEventType, WebhookEntry> | null;
+  saving: WebhookEventType | null;
   openModal: (termId: string) => Promise<void>;
   closeModal: () => void;
-  update: (event: string, patch: Partial<WebhookEntry>) => void;
-  save: (event: string) => Promise<void>;
-  remove: (event: string) => Promise<void>;
+  update: (event: WebhookEventType, patch: Partial<WebhookEntry>) => void;
+  save: (event: WebhookEventType) => Promise<void>;
+  remove: (event: WebhookEventType) => Promise<void>;
 }
 
 export const useWebhookStore = create<WebhookState>((set, get) => ({
@@ -26,10 +27,14 @@ export const useWebhookStore = create<WebhookState>((set, get) => ({
   openModal: async (termId) => {
     set({ open: true, termId, loading: true, data: null });
     try {
-      const raw = await apiFetch<Array<{ event: string; url: string; auth_header: string }>>(
+      const raw = await apiFetch<Array<{ event: WebhookEventType; url: string; auth_header: string }>>(
         `/api/terms/${termId}/outgoing-webhooks`
       );
-      set({ data: Object.fromEntries(raw.map(d => [d.event, { url: d.url, auth_header: d.auth_header }])) });
+      set({
+        data: Object.fromEntries(
+          raw.map(d => [d.event, { url: d.url, auth_header: d.auth_header }])
+        ) as Record<WebhookEventType, WebhookEntry>,
+      });
     } finally {
       set({ loading: false });
     }

@@ -27,6 +27,7 @@ export type CSVResult = {
 };
 
 export type TemplateType = "registration" | "reminder" | "payment_confirmation";
+export type WebhookEventType = "registration" | "payment" | "reminder";
 
 export type TemplateData = {
   type: TemplateType;
