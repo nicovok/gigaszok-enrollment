@@ -3,10 +3,6 @@ import { config } from "./config";
 // @ts-ignore
 import bannerPath from "./email-banner.png" with { type: "file" };
 // @ts-ignore
-import reminderBannerPath from "./email-reminder-banner.png" with { type: "file" };
-// @ts-ignore
-import registrationBannerPath from "./email-registration-banner.png" with { type: "file" };
-// @ts-ignore
 import footerPath from "./email-footer.png" with { type: "file" };
 // @ts-ignore
 import logoPath from "./email-logo.png" with { type: "file" };
@@ -21,8 +17,6 @@ const transporter = nodemailer.createTransport({
 async function loadAssets() {
   return {
     banner: Buffer.from(await Bun.file(bannerPath).arrayBuffer()),
-    reminderBanner: Buffer.from(await Bun.file(reminderBannerPath).arrayBuffer()),
-    registrationBanner: Buffer.from(await Bun.file(registrationBannerPath).arrayBuffer()),
     footer: Buffer.from(await Bun.file(footerPath).arrayBuffer()),
     logo: Buffer.from(await Bun.file(logoPath).arrayBuffer()),
   };
