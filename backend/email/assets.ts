@@ -25,11 +25,20 @@ export function getAssets(): Assets {
   return assets;
 }
 
+const bannerCache = new Map<string, Buffer | null>();
+
 export async function loadBanner(bannerPath: string | null | undefined): Promise<Buffer | null> {
   if (!bannerPath) return null;
+  if (bannerCache.has(bannerPath)) return bannerCache.get(bannerPath) ?? null;
+  let result: Buffer | null = null;
   try {
     const f = Bun.file(bannerPath);
-    if (await f.exists()) return Buffer.from(await f.arrayBuffer());
+    if (await f.exists()) result = Buffer.from(await f.arrayBuffer());
   } catch {}
-  return null;
+  bannerCache.set(bannerPath, result);
+  return result;
+}
+
+export function clearBannerCache(bannerPath: string): void {
+  bannerCache.delete(bannerPath);
 }

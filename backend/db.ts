@@ -82,6 +82,11 @@ export function initDb() {
     );
   `);
 
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_applicants_term ON applicants(term_id, paid);
+    CREATE INDEX IF NOT EXISTS idx_email_logs_applicant ON email_logs(applicant_id);
+  `);
+
   // Migrations for existing databases
   const migrations = [
     `ALTER TABLE email_templates ADD COLUMN banner_path TEXT`,

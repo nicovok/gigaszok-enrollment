@@ -15,7 +15,6 @@ export type Applicant = {
   child_name: string;
   parent_name: string;
   email: string;
-  raw_json: string;
   paid: number;
   created_at: number;
 };

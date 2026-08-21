@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   AppShell, Stack, Alert, Group, Button, SegmentedControl,
   Paper, Code, CopyButton, Tooltip, ActionIcon, FileButton, Text,
@@ -36,10 +36,12 @@ export default function Dashboard() {
     fetchApplicants();
   }, [selectedTermId]);
 
-  const paidCount = applicants.filter(a => a.paid === 1).length;
+  const paidCount = useMemo(() => applicants.filter(a => a.paid === 1).length, [applicants]);
   const unpaidCount = applicants.length - paidCount;
-  const selectedTerm = terms.find(t => t.id === selectedTermId);
-  const webhookUrl = selectedTerm ? `${window.location.origin}/webhooks/${selectedTerm.slug}` : null;
+  const webhookUrl = useMemo(() => {
+    const term = terms.find(t => t.id === selectedTermId);
+    return term ? `${window.location.origin}/webhooks/${term.slug}` : null;
+  }, [terms, selectedTermId]);
 
   return (
     <AppShell header={{ height: 56 }} padding="md">

@@ -3,3 +3,9 @@ node_modules/
 *.db
 beiratkozas
 CLAUDE.md
+.claude/
+data/
+backend/email-banner.png
+backend/email-footer.png
+backend/email-logo.png
+frontend/logo.png

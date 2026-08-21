@@ -6,4 +6,7 @@ export const transporter = nodemailer.createTransport({
   port: config.smtp.port,
   secure: false,
   auth: { user: config.smtp.user, pass: config.smtp.pass },
+  pool: true,
+  maxConnections: 5,
+  maxMessages: Infinity,
 });

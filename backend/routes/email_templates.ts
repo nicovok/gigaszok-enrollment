@@ -3,7 +3,7 @@ import { db } from "../db";
 import { config } from "../config";
 import type { BunRequest, EmailTemplate, EmailTemplateType } from "../schema";
 import { EMAIL_TEMPLATE_TYPES } from "../schema";
-import { DEFAULT_TEMPLATES } from "../email";
+import { DEFAULT_TEMPLATES, clearBannerCache } from "../email";
 import { randomUUID } from "crypto";
 import { join } from "node:path";
 import { mkdir, rm } from "node:fs/promises";
@@ -121,6 +121,7 @@ export const emailTemplateRoutes = {
       const filename = `${termId}_${type}.${ext}`;
       const filepath = join(dir, filename);
       await Bun.write(filepath, file);
+      clearBannerCache(filepath);
 
       const existing = db.prepare(`SELECT id FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as { id: string } | null;
       if (existing) {
@@ -140,6 +141,7 @@ export const emailTemplateRoutes = {
       const row = db.prepare(`SELECT banner_path FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as { banner_path: string | null } | null;
 
       if (row?.banner_path) {
+        clearBannerCache(row.banner_path);
         try { await rm(row.banner_path); } catch {}
         db.prepare(`UPDATE email_templates SET banner_path = NULL WHERE term_id = ? AND type = ?`).run(termId, type);
       }

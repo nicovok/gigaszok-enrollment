@@ -10,8 +10,8 @@ export const applicantRoutes = {
       const termId = (req as BunRequest<{ id: string }>).params.id;
       requireTerm(termId);
       const applicants = db.prepare(
-        `SELECT * FROM applicants WHERE term_id = ? ORDER BY created_at DESC`
-      ).all(termId) as Applicant[];
+        `SELECT id, term_id, child_name, parent_name, email, paid, created_at FROM applicants WHERE term_id = ? ORDER BY created_at DESC`
+      ).all(termId) as Omit<Applicant, "raw_json">[];
       return Response.json(applicants);
     },
   },

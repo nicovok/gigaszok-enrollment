@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Paper, Table, Text, Badge, Button, Group, Tooltip, ActionIcon, Center, Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
@@ -36,8 +37,9 @@ export function ApplicantsTable({ onEmailLog }: Props) {
     togglePaid, sendReminder, sendRegistrationEmail, deleteApplicant,
   } = useApplicantStore();
 
-  const filtered = applicants.filter(a =>
-    filter === "all" ? true : filter === "paid" ? a.paid === 1 : a.paid === 0
+  const filtered = useMemo(() =>
+    applicants.filter(a => filter === "all" ? true : filter === "paid" ? a.paid === 1 : a.paid === 0),
+    [applicants, filter]
   );
 
   if (loading) return <Center py="xl"><Loader /></Center>;

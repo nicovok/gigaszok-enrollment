@@ -12,6 +12,18 @@ function countSettled(results: PromiseSettledResult<unknown>[]) {
   };
 }
 
+async function settledBatch(
+  items: Applicant[],
+  fn: (a: Applicant) => Promise<void>,
+  concurrency = 5
+): Promise<PromiseSettledResult<void>[]> {
+  const results: PromiseSettledResult<void>[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    results.push(...await Promise.allSettled(items.slice(i, i + concurrency).map(fn)));
+  }
+  return results;
+}
+
 export const messagingRoutes = {
   "/api/terms/:id/broadcast": {
     async POST(req: Request) {
@@ -28,13 +40,16 @@ export const messagingRoutes = {
       if (filter === "paid") whereClause += ` AND paid = 1`;
       if (filter === "unpaid") whereClause += ` AND paid = 0`;
 
-      const targets = db.prepare(`SELECT * FROM applicants WHERE ${whereClause}`).all(termId) as Applicant[];
+      const targets = db.prepare(
+        `SELECT id, parent_name, email FROM applicants WHERE ${whereClause}`
+      ).all(termId) as Pick<Applicant, "id" | "parent_name" | "email">[];
 
-      const results = await Promise.allSettled(
-        targets.map(a =>
-          sendBroadcastEmail(a.email, a.parent_name, subject.trim(), body.trim())
-            .then(() => logEmail(a.id, "custom"))
-        )
+      const subjectTrimmed = subject.trim();
+      const bodyTrimmed = body.trim();
+      const results = await settledBatch(
+        targets as Applicant[],
+        a => sendBroadcastEmail(a.email, a.parent_name, subjectTrimmed, bodyTrimmed)
+          .then(() => logEmail(a.id, "custom"))
       );
       const { sent, failed } = countSettled(results);
       return Response.json({ sent, failed });
@@ -47,15 +62,14 @@ export const messagingRoutes = {
       const termId = (req as BunRequest<{ id: string }>).params.id;
       requireTerm(termId);
       const unpaid = db.prepare(
-        `SELECT * FROM applicants WHERE term_id = ? AND paid = 0 AND email != ''`
-      ).all(termId) as Applicant[];
+        `SELECT id, child_name, parent_name, email FROM applicants WHERE term_id = ? AND paid = 0 AND email != ''`
+      ).all(termId) as Pick<Applicant, "id" | "child_name" | "parent_name" | "email">[];
 
       const tpl = getTemplate(termId, "reminder");
-      const results = await Promise.allSettled(
-        unpaid.map(a =>
-          sendReminderEmail(a.email, a.parent_name, a.child_name, tpl)
-            .then(() => { logEmail(a.id, "reminder"); fireWebhook(termId, "reminder", a); })
-        )
+      const results = await settledBatch(
+        unpaid as Applicant[],
+        a => sendReminderEmail(a.email, a.parent_name, a.child_name, tpl)
+          .then(() => { logEmail(a.id, "reminder"); fireWebhook(termId, "reminder", a); })
       );
       const { sent, failed } = countSettled(results);
       return Response.json({ sent, failed });
