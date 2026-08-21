@@ -14,83 +14,64 @@ function buildAttachments(customBanner: Buffer | null) {
   ];
 }
 
-export async function sendRegistrationEmail(
+async function sendTemplatedEmail(
+  to: string,
+  parentName: string,
+  childName: string,
+  type: keyof typeof DEFAULT_TEMPLATES,
+  tpl?: TplContent,
+  bankLines?: string[]
+): Promise<void> {
+  if (!to) return;
+  const def = DEFAULT_TEMPLATES[type];
+  const subject = interp(tpl?.subject ?? def.subject, childName, parentName);
+  const box = bankLines ? bankBox(childName, bankLines) : undefined;
+  const body = renderBody(tpl?.body ?? def.body, childName, parentName, box);
+  const customBanner = await loadBanner(tpl?.banner_path);
+  const html = template(`
+    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
+    ${body}
+  `, !!customBanner);
+  await transporter.sendMail({
+    from: `"Gigászok" <${config.smtp.from}>`,
+    to, subject, html,
+    attachments: buildAttachments(customBanner),
+  });
+}
+
+export function sendRegistrationEmail(
   to: string,
   parentName: string,
   childName: string,
   tpl?: TplContent
 ): Promise<void> {
-  if (!to) return;
-  const def = DEFAULT_TEMPLATES.registration;
-  const subject = interp(tpl?.subject ?? def.subject, childName, parentName);
-  const box = bankBox(childName, [
+  return sendTemplatedEmail(to, parentName, childName, "registration", tpl, [
     "<strong>Bankszámlaszám:</strong> 62100140 - 11035408 - 00000000",
     "<strong>Kedvezményezett:</strong> Gigászok Sportegyesület",
     `<strong>Közlemény:</strong> Támogatás - ${childName}`,
   ]);
-  const body = renderBody(tpl?.body ?? def.body, childName, parentName, box);
-  const customBanner = await loadBanner(tpl?.banner_path);
-  const html = template(`
-    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
-    ${body}
-  `, !!customBanner);
-
-  await transporter.sendMail({
-    from: `"Gigászok" <${config.smtp.from}>`,
-    to, subject, html,
-    attachments: buildAttachments(customBanner),
-  });
 }
 
-export async function sendReminderEmail(
+export function sendReminderEmail(
   to: string,
   parentName: string,
   childName: string,
   tpl?: TplContent
 ): Promise<void> {
-  if (!to) return;
-  const def = DEFAULT_TEMPLATES.reminder;
-  const subject = interp(tpl?.subject ?? def.subject, childName, parentName);
-  const box = bankBox(childName, [
+  return sendTemplatedEmail(to, parentName, childName, "reminder", tpl, [
     "<strong>Számlaszám:</strong> 62100140 - 11035408 - 00000000",
     `<strong>Közlemény:</strong> Adomány - ${childName}`,
     "<strong>Összeg:</strong> 5 000 Ft",
   ]);
-  const body = renderBody(tpl?.body ?? def.body, childName, parentName, box);
-  const customBanner = await loadBanner(tpl?.banner_path);
-  const html = template(`
-    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
-    ${body}
-  `, !!customBanner);
-
-  await transporter.sendMail({
-    from: `"Gigászok" <${config.smtp.from}>`,
-    to, subject, html,
-    attachments: buildAttachments(customBanner),
-  });
 }
 
-export async function sendPaymentConfirmationEmail(
+export function sendPaymentConfirmationEmail(
   to: string,
   parentName: string,
   childName: string,
   tpl?: TplContent
 ): Promise<void> {
-  if (!to) return;
-  const def = DEFAULT_TEMPLATES.payment_confirmation;
-  const subject = interp(tpl?.subject ?? def.subject, childName, parentName);
-  const body = renderBody(tpl?.body ?? def.body, childName, parentName);
-  const customBanner = await loadBanner(tpl?.banner_path);
-  const html = template(`
-    <p style="color:#1B2B6B;font-size:18px;font-weight:600;margin:0 0 16px;">Kedves ${parentName}!</p>
-    ${body}
-  `, !!customBanner);
-
-  await transporter.sendMail({
-    from: `"Gigászok" <${config.smtp.from}>`,
-    to, subject, html,
-    attachments: buildAttachments(customBanner),
-  });
+  return sendTemplatedEmail(to, parentName, childName, "payment_confirmation", tpl);
 }
 
 export async function sendBroadcastEmail(

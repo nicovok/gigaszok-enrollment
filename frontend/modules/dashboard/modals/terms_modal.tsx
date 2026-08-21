@@ -3,6 +3,7 @@ import {
   Modal, Stack, Table, Code, Badge, Group, Text, Button,
   Paper, TextInput, ActionIcon, Tooltip, CopyButton,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { IconPlus, IconCheck, IconCopy, IconMailCog, IconWebhook, IconTrash } from "@tabler/icons-react";
 import { ApiError } from "@/lib/api";
 import { useTermStore } from "@/stores/use_term_store";
@@ -45,7 +46,7 @@ export function TermsModal({ opened, onClose }: Props) {
     try {
       await deleteTerm(id);
     } catch {
-      alert("Nem törölhető: vannak jelentkezők ebben a turnusban.");
+      notifications.show({ color: "red", message: "Nem törölhető: vannak jelentkezők ebben a turnusban." });
     }
   }
 

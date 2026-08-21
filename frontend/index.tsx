@@ -1,7 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { MantineProvider } from "@mantine/core";
+import { ModalsProvider } from "@mantine/modals";
+import { Notifications } from "@mantine/notifications";
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import Root from "./modules/root";
 import "./index.css";
 
@@ -9,7 +12,10 @@ const root = createRoot(document.getElementById("root")!);
 root.render(
   <React.StrictMode>
     <MantineProvider>
-      <Root />
+      <ModalsProvider>
+        <Notifications />
+        <Root />
+      </ModalsProvider>
     </MantineProvider>
   </React.StrictMode>
 );

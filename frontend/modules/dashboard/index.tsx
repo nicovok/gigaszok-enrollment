@@ -12,7 +12,6 @@ import { WebhooksModal } from "./modals/webhooks_modal";
 import { EmailTemplatesModal } from "./modals/email_templates_modal";
 import { BroadcastModal } from "./modals/broadcast_modal";
 import { ReminderModal } from "./modals/reminder_modal";
-import { ConfirmPaidModal, ConfirmRemindModal, ConfirmRegEmailModal, DeleteApplicantModal } from "./modals/confirm_modals";
 import { EmailLogModal } from "./modals/email_log_modal";
 import { useTermStore } from "@/stores/use_term_store";
 import { useApplicantStore } from "@/stores/use_applicant_store";
@@ -23,10 +22,6 @@ type ModalState =
   | { type: "terms" }
   | { type: "broadcast" }
   | { type: "remind" }
-  | { type: "confirmPaid"; applicant: Applicant }
-  | { type: "confirmRemind"; applicant: Applicant }
-  | { type: "confirmRegEmail"; applicant: Applicant }
-  | { type: "delete"; applicant: Applicant }
   | { type: "emailLog"; applicant: Applicant; logs: EmailLog[] };
 
 export default function Dashboard() {
@@ -129,10 +124,6 @@ export default function Dashboard() {
 
           {selectedTermId && (
             <ApplicantsTable
-              onConfirmPaid={a => setModal({ type: "confirmPaid", applicant: a })}
-              onConfirmRemind={a => setModal({ type: "confirmRemind", applicant: a })}
-              onConfirmRegEmail={a => setModal({ type: "confirmRegEmail", applicant: a })}
-              onDelete={a => setModal({ type: "delete", applicant: a })}
               onEmailLog={(a, logs) => setModal({ type: "emailLog", applicant: a, logs })}
             />
           )}
@@ -144,10 +135,6 @@ export default function Dashboard() {
       <EmailTemplatesModal />
       <BroadcastModal opened={modal.type === "broadcast"} onClose={closeModal} />
       <ReminderModal opened={modal.type === "remind"} unpaidCount={unpaidCount} onClose={closeModal} />
-      <ConfirmPaidModal applicant={modal.type === "confirmPaid" ? modal.applicant : null} onClose={closeModal} />
-      <ConfirmRemindModal applicant={modal.type === "confirmRemind" ? modal.applicant : null} onClose={closeModal} />
-      <ConfirmRegEmailModal applicant={modal.type === "confirmRegEmail" ? modal.applicant : null} onClose={closeModal} />
-      <DeleteApplicantModal applicant={modal.type === "delete" ? modal.applicant : null} onClose={closeModal} />
       <EmailLogModal
         applicant={modal.type === "emailLog" ? modal.applicant : null}
         logs={modal.type === "emailLog" ? modal.logs : []}
