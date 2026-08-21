@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
-import { useAuthStore } from "@/stores/use_auth_store";
 import type { Applicant, CSVResult } from "@/types";
 
 interface ApplicantState {
@@ -60,13 +59,10 @@ export const useApplicantStore = create<ApplicantState>((set) => ({
     try {
       const form = new FormData();
       form.append("file", file);
-      const token = useAuthStore.getState().token;
-      const res = await fetch(`/api/terms/${termId}/csv`, {
+      const result = await apiFetch<CSVResult>(`/api/terms/${termId}/csv`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
-      const result = await res.json() as CSVResult;
       set({ csvResult: result });
       const updated = await apiFetch<Applicant[]>(`/api/terms/${termId}/applicants`);
       set({ applicants: updated });

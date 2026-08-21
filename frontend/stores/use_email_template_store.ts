@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { apiFetch } from "@/lib/api";
-import { useAuthStore } from "@/stores/use_auth_store";
 import type { TemplateData } from "@/types";
 
 interface EmailTemplateState {
@@ -86,10 +85,8 @@ export const useEmailTemplateStore = create<EmailTemplateState>((set, get) => ({
     if (!termId) return;
     const form = new FormData();
     form.append("file", file);
-    const token = useAuthStore.getState().token;
-    await fetch(`/api/terms/${termId}/email-templates/${type}/banner`, {
+    await apiFetch(`/api/terms/${termId}/email-templates/${type}/banner`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
       body: form,
     });
     get().updateTpl(type, { has_banner: true });

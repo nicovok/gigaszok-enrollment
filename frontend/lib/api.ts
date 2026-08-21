@@ -8,14 +8,18 @@ export class ApiError extends Error {
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = useAuthStore.getState().token;
+  const isFormData = options?.body instanceof FormData;
   const r = await fetch(path, {
     ...options,
-    headers: { ...(options?.headers ?? {}), Authorization: `Bearer ${token}` },
+    headers: {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(options?.headers ?? {}),
+      Authorization: `Bearer ${token}`,
+    },
   });
   if (!r.ok) {
     if (r.status === 401) {
-      localStorage.removeItem("token");
-      window.location.reload();
+      useAuthStore.getState().logout();
     }
     const body = await r.text().catch(() => "");
     throw new ApiError(r.status, body);
