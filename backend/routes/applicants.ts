@@ -6,6 +6,14 @@ import { fireWebhook } from "../webhook_caller";
 import { parseCSV, isAmount5000 } from "../csv";
 import { logEmail } from "../email_log";
 
+function handlePaymentConfirmed(termId: string, applicant: Applicant): void {
+  const tpl = getTemplate(termId, "payment_confirmation");
+  sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, tpl)
+    .then(() => logEmail(applicant.id, "payment_confirmation"))
+    .catch(err => console.error("[email] payment confirmation send failed:", err));
+  fireWebhook(termId, "payment", applicant);
+}
+
 export const applicantRoutes = {
   "/api/terms/:id/applicants": {
     async GET(req: Request) {
@@ -37,13 +45,7 @@ export const applicantRoutes = {
         .run(paid ? 1 : 0, applicantId, termId);
       if (paid) {
         const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ?`).get(applicantId) as Applicant;
-        if (applicant) {
-          const tpl = getTemplate(termId, "payment_confirmation");
-          sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, tpl)
-            .then(() => logEmail(applicant.id, "payment_confirmation"))
-            .catch(err => console.error("[email] failed:", err));
-          fireWebhook(termId, "payment", applicant);
-        }
+        if (applicant) handlePaymentConfirmed(termId, applicant);
       }
       return Response.json({ ok: true });
     },
@@ -168,11 +170,7 @@ export const applicantRoutes = {
               db.prepare(`UPDATE applicants SET paid = 1 WHERE id = ?`).run(applicant.id);
               result.updated++;
               applicant.paid = 1;
-              const csvTpl = getTemplate(termId, "payment_confirmation");
-              sendPaymentConfirmationEmail(applicant.email, applicant.parent_name, applicant.child_name, csvTpl)
-                .then(() => logEmail(applicant.id, "payment_confirmation"))
-                .catch(err => console.error("[email] payment confirmation send failed:", err));
-              fireWebhook(termId, "payment", applicant);
+              handlePaymentConfirmed(termId, applicant);
             }
             break;
           }
