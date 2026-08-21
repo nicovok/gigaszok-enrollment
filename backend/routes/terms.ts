@@ -26,8 +26,11 @@ export const termRoutes = {
       try {
         db.prepare(`INSERT INTO terms (id, name, slug, active, webhook_secret, created_at) VALUES (?, ?, ?, 1, ?, ?)`)
           .run(id, name.trim(), slug.trim(), webhook_secret, Date.now());
-      } catch {
-        return Response.json({ error: "Slug already exists" }, { status: 409 });
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("UNIQUE constraint failed")) {
+          return Response.json({ error: "Slug already exists" }, { status: 409 });
+        }
+        throw e;
       }
       return Response.json({ id, name: name.trim(), slug: slug.trim(), active: 1, webhook_secret }, { status: 201 });
     },

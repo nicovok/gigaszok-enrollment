@@ -14,6 +14,13 @@ function handlePaymentConfirmed(termId: string, applicant: Applicant): void {
   fireWebhook(termId, "payment", applicant);
 }
 
+function countSettled(results: PromiseSettledResult<unknown>[]) {
+  return {
+    sent: results.filter(r => r.status === "fulfilled").length,
+    failed: results.filter(r => r.status === "rejected").length,
+  };
+}
+
 export const applicantRoutes = {
   "/api/terms/:id/applicants": {
     async GET(req: Request) {
@@ -73,8 +80,7 @@ export const applicantRoutes = {
             .then(() => logEmail(a.id, "custom"))
         )
       );
-      const sent = results.filter(r => r.status === "fulfilled").length;
-      const failed = results.filter(r => r.status === "rejected").length;
+      const { sent, failed } = countSettled(results);
       return Response.json({ sent, failed });
     },
   },
@@ -94,8 +100,7 @@ export const applicantRoutes = {
             .then(() => { logEmail(a.id, "reminder"); fireWebhook(termId, "reminder", a); })
         )
       );
-      const sent = results.filter(r => r.status === "fulfilled").length;
-      const failed = results.filter(r => r.status === "rejected").length;
+      const { sent, failed } = countSettled(results);
       return Response.json({ sent, failed });
     },
   },

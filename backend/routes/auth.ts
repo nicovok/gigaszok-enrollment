@@ -17,9 +17,9 @@ export const authRoutes = {
         const tokenData = await exchangeCodeForToken(code);
         const userInfo = await getUserInfo(tokenData.access_token);
 
-        const sub = userInfo.sub as string;
-        const email = userInfo.email as string;
-        const name = (userInfo.name ?? userInfo.preferred_username ?? "Admin") as string;
+        const sub = userInfo.sub;
+        const email = userInfo.email;
+        const name = userInfo.name ?? userInfo.preferred_username ?? "Admin";
 
         let admin = db.prepare(`SELECT * FROM admins WHERE pocketid_sub = ?`).get(sub) as Admin | undefined;
 
