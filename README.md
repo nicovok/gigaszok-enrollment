@@ -1,6 +1,8 @@
 # Beiratkozás — Gigászok Sportegyesület
 
-Enrollment management system built for Gigászok Sportegyesület. Parents fill out an OpnForm registration form; the data is transformed by an n8n workflow and pushed into the system via webhook. From there, the admin tracks registration fee payments and triggers further automations — such as issuing membership cards in the club's bérlet system.
+Enrollment management system built for Gigászok Sportegyesület.
+
+![Dashboard screenshot](docs/screenshot.png) Parents fill out an OpnForm registration form; the data is transformed by an n8n workflow and pushed into the system via webhook. From there, the admin tracks registration fee payments and triggers further automations — such as issuing membership cards in the club's bérlet system.
 
 ## Flow
 
