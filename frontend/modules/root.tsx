@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Center, Loader } from "@mantine/core";
 import Dashboard from "./dashboard";
-import { useAuthStore } from "../stores/useAuthStore";
+import { useAuthStore } from "@/stores/use_auth_store";
 
 export default function Root() {
   const { token, setToken } = useAuthStore();

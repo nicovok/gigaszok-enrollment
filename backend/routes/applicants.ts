@@ -2,7 +2,7 @@ import { requireAuth } from "../middleware";
 import { db } from "../db";
 import type { BunRequest, Applicant, EmailLog, EmailTemplate, CSVResult } from "../schema";
 import { sendRegistrationEmail, sendPaymentConfirmationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
-import { fireWebhook } from "../webhook-caller";
+import { fireWebhook } from "../webhook_caller";
 import { randomUUID } from "crypto";
 
 export function getTemplate(termId: string, type: EmailTemplate["type"]) {

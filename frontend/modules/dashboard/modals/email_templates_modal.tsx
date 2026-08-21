@@ -3,9 +3,9 @@ import {
   FileButton, Button, TextInput, Textarea, Group, Code,
 } from "@mantine/core";
 import { IconMail, IconBell, IconCheck, IconUpload } from "@tabler/icons-react";
-import { useEmailTemplateStore } from "../../../stores/useEmailTemplateStore";
-import { useTermStore } from "../../../stores/useTermStore";
-import type { TemplateType } from "../../../types";
+import { useEmailTemplateStore } from "@/stores/use_email_template_store";
+import { useTermStore } from "@/stores/use_term_store";
+import type { TemplateType } from "@/types";
 
 const TEMPLATE_TABS: Array<{ value: TemplateType; label: string; icon: React.ReactNode }> = [
   { value: "registration", label: "Visszaigazolás", icon: <IconMail size={14} /> },

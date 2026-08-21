@@ -4,19 +4,19 @@ import {
   Paper, Code, CopyButton, Tooltip, ActionIcon, FileButton, Text,
 } from "@mantine/core";
 import { IconAlertCircle, IconCheck, IconCopy, IconSend, IconUpload } from "@tabler/icons-react";
-import { Header } from "./Header";
-import { StatsBar } from "./StatsBar";
-import { ApplicantsTable } from "./ApplicantsTable";
-import { TermsModal } from "./modals/TermsModal";
-import { WebhooksModal } from "./modals/WebhooksModal";
-import { EmailTemplatesModal } from "./modals/EmailTemplatesModal";
-import { BroadcastModal } from "./modals/BroadcastModal";
-import { ReminderModal } from "./modals/ReminderModal";
-import { ConfirmPaidModal, ConfirmRemindModal, ConfirmRegEmailModal, DeleteApplicantModal } from "./modals/ConfirmModals";
-import { EmailLogModal } from "./modals/EmailLogModal";
-import { useTermStore } from "../../stores/useTermStore";
-import { useApplicantStore } from "../../stores/useApplicantStore";
-import type { Applicant, EmailLog } from "../../types";
+import { Header } from "./header";
+import { StatsBar } from "./stats_bar";
+import { ApplicantsTable } from "./applicants_table";
+import { TermsModal } from "./modals/terms_modal";
+import { WebhooksModal } from "./modals/webhooks_modal";
+import { EmailTemplatesModal } from "./modals/email_templates_modal";
+import { BroadcastModal } from "./modals/broadcast_modal";
+import { ReminderModal } from "./modals/reminder_modal";
+import { ConfirmPaidModal, ConfirmRemindModal, ConfirmRegEmailModal, DeleteApplicantModal } from "./modals/confirm_modals";
+import { EmailLogModal } from "./modals/email_log_modal";
+import { useTermStore } from "@/stores/use_term_store";
+import { useApplicantStore } from "@/stores/use_applicant_store";
+import type { Applicant, EmailLog } from "@/types";
 
 export default function Dashboard() {
   const { terms, selectedTermId, fetchTerms } = useTermStore();

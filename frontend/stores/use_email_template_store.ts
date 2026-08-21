@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { apiFetch } from "../lib/api";
-import { useAuthStore } from "./useAuthStore";
-import type { TemplateData } from "../types";
+import { apiFetch } from "@/lib/api";
+import { useAuthStore } from "@/stores/use_auth_store";
+import type { TemplateData } from "@/types";
 
 interface EmailTemplateState {
   open: boolean;

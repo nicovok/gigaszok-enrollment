@@ -1,4 +1,4 @@
-import { useAuthStore } from "../stores/useAuthStore";
+import { useAuthStore } from "@/stores/use_auth_store";
 
 export class ApiError extends Error {
   constructor(public status: number, public body: string) {

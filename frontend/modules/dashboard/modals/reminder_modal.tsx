@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal, Stack, Text, Group, Button } from "@mantine/core";
-import { apiFetch } from "../../../lib/api";
-import { useTermStore } from "../../../stores/useTermStore";
+import { apiFetch } from "@/lib/api";
+import { useTermStore } from "@/stores/use_term_store";
 
 type Props = { opened: boolean; unpaidCount: number; onClose: () => void };
 

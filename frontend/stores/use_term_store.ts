@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { apiFetch } from "../lib/api";
-import type { Term } from "../types";
+import { apiFetch } from "@/lib/api";
+import type { Term } from "@/types";
 
 interface TermState {
   terms: Term[];

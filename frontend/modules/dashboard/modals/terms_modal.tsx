@@ -4,10 +4,10 @@ import {
   Paper, TextInput, ActionIcon, Tooltip, CopyButton,
 } from "@mantine/core";
 import { IconPlus, IconCheck, IconCopy, IconMailCog, IconWebhook, IconTrash } from "@tabler/icons-react";
-import { ApiError } from "../../../lib/api";
-import { useTermStore } from "../../../stores/useTermStore";
-import { useWebhookStore } from "../../../stores/useWebhookStore";
-import { useEmailTemplateStore } from "../../../stores/useEmailTemplateStore";
+import { ApiError } from "@/lib/api";
+import { useTermStore } from "@/stores/use_term_store";
+import { useWebhookStore } from "@/stores/use_webhook_store";
+import { useEmailTemplateStore } from "@/stores/use_email_template_store";
 
 type Props = { opened: boolean; onClose: () => void };
 

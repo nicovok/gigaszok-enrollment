@@ -5,8 +5,8 @@ import { AuthError } from "./middleware";
 import { authRoutes } from "./routes/auth";
 import { termRoutes } from "./routes/terms";
 import { applicantRoutes } from "./routes/applicants";
-import { emailTemplateRoutes } from "./routes/email-templates";
-import { outgoingWebhookRoutes } from "./routes/outgoing-webhooks";
+import { emailTemplateRoutes } from "./routes/email_templates";
+import { outgoingWebhookRoutes } from "./routes/outgoing_webhooks";
 import { webhookRoutes } from "./routes/webhook";
 import frontend from "../frontend/index.html";
 

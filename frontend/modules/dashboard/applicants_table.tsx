@@ -1,10 +1,10 @@
 import { Paper, Table, Text, Badge, Button, Group, Tooltip, ActionIcon, Center, Loader } from "@mantine/core";
 import { IconMail, IconBell, IconTrash, IconHistory } from "@tabler/icons-react";
-import { apiFetch } from "../../lib/api";
-import { useApplicantStore } from "../../stores/useApplicantStore";
-import { useTermStore } from "../../stores/useTermStore";
-import { formatDate } from "../../lib/utils";
-import type { Applicant, EmailLog } from "../../types";
+import { apiFetch } from "@/lib/api";
+import { useApplicantStore } from "@/stores/use_applicant_store";
+import { useTermStore } from "@/stores/use_term_store";
+import { formatDate } from "@/lib/utils";
+import type { Applicant, EmailLog } from "@/types";
 
 type Props = {
   onConfirmPaid: (a: Applicant) => void;

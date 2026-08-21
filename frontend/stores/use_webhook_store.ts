@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { apiFetch } from "../lib/api";
+import { apiFetch } from "@/lib/api";
 
 type WebhookEntry = { url: string; auth_header: string };
 

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Modal, Stack, SegmentedControl, TextInput, Textarea, Text, Group, Button } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
-import { apiFetch } from "../../../lib/api";
-import { useTermStore } from "../../../stores/useTermStore";
+import { apiFetch } from "@/lib/api";
+import { useTermStore } from "@/stores/use_term_store";
 
 type Props = { opened: boolean; onClose: () => void };
 

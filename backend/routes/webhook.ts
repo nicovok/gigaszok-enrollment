@@ -3,7 +3,7 @@ import type { BunRequest, Term, Applicant } from "../schema";
 import { randomUUID } from "crypto";
 import { sendRegistrationEmail } from "../email";
 import { getTemplate } from "./applicants";
-import { fireWebhook } from "../webhook-caller";
+import { fireWebhook } from "../webhook_caller";
 
 export const webhookRoutes = {
   "/webhooks/:slug": {

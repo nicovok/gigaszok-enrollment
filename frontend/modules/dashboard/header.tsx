@@ -1,7 +1,7 @@
 import { AppShell, Group, Title, Button, Select, Avatar, Text, UnstyledButton, Image } from "@mantine/core";
 import { IconEdit } from "@tabler/icons-react";
-import { useAuthStore } from "../../stores/useAuthStore";
-import { useTermStore } from "../../stores/useTermStore";
+import { useAuthStore } from "@/stores/use_auth_store";
+import { useTermStore } from "@/stores/use_term_store";
 import logo from "../../logo.png";
 
 type Props = { onOpenTerms: () => void };

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { User } from "../types";
+import type { User } from "@/types";
 
 function decodeToken(token: string): User {
   const payload = token.split(".")[1];

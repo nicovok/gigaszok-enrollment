@@ -1,6 +1,6 @@
 import { Modal, Stack, Text, Table, Badge } from "@mantine/core";
-import { formatDate } from "../../../lib/utils";
-import type { Applicant, EmailLog } from "../../../types";
+import { formatDate } from "@/lib/utils";
+import type { Applicant, EmailLog } from "@/types";
 
 type Props = { applicant: Applicant | null; logs: EmailLog[]; onClose: () => void };
 

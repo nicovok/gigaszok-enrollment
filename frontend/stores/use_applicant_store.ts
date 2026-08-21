@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { apiFetch } from "../lib/api";
-import { useAuthStore } from "./useAuthStore";
-import type { Applicant, CSVResult } from "../types";
+import { apiFetch } from "@/lib/api";
+import { useAuthStore } from "@/stores/use_auth_store";
+import type { Applicant, CSVResult } from "@/types";
 
 interface ApplicantState {
   applicants: Applicant[];

@@ -1,6 +1,6 @@
 import { Modal, Stack, Paper, Badge, Group, TextInput, PasswordInput, Button, Text, Code, Center, Loader } from "@mantine/core";
-import { useWebhookStore } from "../../../stores/useWebhookStore";
-import { useTermStore } from "../../../stores/useTermStore";
+import { useWebhookStore } from "@/stores/use_webhook_store";
+import { useTermStore } from "@/stores/use_term_store";
 
 const EVENTS = [
   { event: "registration", label: "Beiratkozás", color: "blue" },

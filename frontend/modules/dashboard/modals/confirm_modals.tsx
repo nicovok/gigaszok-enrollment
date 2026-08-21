@@ -1,8 +1,8 @@
 import { Modal, Stack, Text, Group, Button } from "@mantine/core";
-import { apiFetch } from "../../../lib/api";
-import { useApplicantStore } from "../../../stores/useApplicantStore";
-import { useTermStore } from "../../../stores/useTermStore";
-import type { Applicant } from "../../../types";
+import { apiFetch } from "@/lib/api";
+import { useApplicantStore } from "@/stores/use_applicant_store";
+import { useTermStore } from "@/stores/use_term_store";
+import type { Applicant } from "@/types";
 
 type ApplicantModalProps = { applicant: Applicant | null; onClose: () => void };
 
