@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 
-function require(key: string): string {
+function env(key: string): string {
   const value = Bun.env[key];
   if (!value) throw new Error(`Missing required environment variable: ${key}`);
   return value;
@@ -9,18 +9,18 @@ function require(key: string): string {
 export const config = {
   dataDir: dirname(Bun.env.DB_PATH ?? "./beiratkozas.db"),
   port: parseInt(Bun.env.PORT ?? "3000"),
-  jwtSecret: require("JWT_SECRET"),
+  jwtSecret: env("JWT_SECRET"),
   smtp: {
-    host: require("SMTP_HOST"),
+    host: env("SMTP_HOST"),
     port: parseInt(Bun.env.SMTP_PORT ?? "2525"),
-    user: require("SMTP_USR"),
-    pass: require("SMTP_PASS"),
-    from: Bun.env.EMAIL_FROM ?? require("SMTP_USR"),
+    user: env("SMTP_USR"),
+    pass: env("SMTP_PASS"),
+    from: Bun.env.EMAIL_FROM ?? env("SMTP_USR"),
   },
   pocketId: {
     baseUrl: "https://auth.nicoprt.xyz",
-    clientId: require("POCKETID_CLIENT_ID"),
-    clientSecret: require("POCKETID_CLIENT_SECRET"),
-    redirectUri: require("POCKETID_REDIRECT_URI"),
+    clientId: env("POCKETID_CLIENT_ID"),
+    clientSecret: env("POCKETID_CLIENT_SECRET"),
+    redirectUri: env("POCKETID_REDIRECT_URI"),
   },
 };

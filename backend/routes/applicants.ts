@@ -1,5 +1,5 @@
 import { requireAuth } from "../middleware";
-import { db } from "../db";
+import { db, requireTerm } from "../db";
 import type { BunRequest, Applicant, EmailLog } from "../schema";
 import { handlePaymentConfirmed } from "../payment";
 
@@ -8,6 +8,7 @@ export const applicantRoutes = {
     async GET(req: Request) {
       await requireAuth(req);
       const termId = (req as BunRequest<{ id: string }>).params.id;
+      requireTerm(termId);
       const applicants = db.prepare(
         `SELECT * FROM applicants WHERE term_id = ? ORDER BY created_at DESC`
       ).all(termId) as Applicant[];

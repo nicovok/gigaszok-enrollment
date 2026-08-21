@@ -1,11 +1,21 @@
 import { Database } from "bun:sqlite";
-import type { EmailTemplate } from "./schema";
+import type { EmailTemplate, Term } from "./schema";
 
 const sqlite = new Database(Bun.env.DB_PATH ?? "beiratkozas.db");
 export const db = sqlite;
 
+export class TermNotFoundError extends Error {
+  constructor() { super("Term not found"); this.name = "TermNotFoundError"; }
+}
+
+export function requireTerm(termId: string): Term {
+  const term = db.prepare(`SELECT * FROM terms WHERE id = ?`).get(termId) as Term | null;
+  if (!term) throw new TermNotFoundError();
+  return term;
+}
+
 export function getTemplate(termId: string, type: EmailTemplate["type"]): EmailTemplate | undefined {
-  return db.prepare(`SELECT * FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as EmailTemplate | null ?? undefined;
+  return db.prepare(`SELECT * FROM email_templates WHERE term_id = ? AND type = ?`).get(termId, type) as EmailTemplate | undefined;
 }
 
 export function initDb() {

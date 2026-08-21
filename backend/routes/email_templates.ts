@@ -2,12 +2,11 @@ import { requireAuth } from "../middleware";
 import { db } from "../db";
 import { config } from "../config";
 import type { BunRequest, EmailTemplate, EmailTemplateType } from "../schema";
+import { EMAIL_TEMPLATE_TYPES } from "../schema";
 import { DEFAULT_TEMPLATES } from "../email";
 import { randomUUID } from "crypto";
 import { join } from "node:path";
 import { mkdir, rm } from "node:fs/promises";
-
-const VALID_TYPES: EmailTemplateType[] = ["registration", "reminder", "payment_confirmation"];
 
 function bannersDir() {
   return join(config.dataDir, "banners");
@@ -22,7 +21,7 @@ export const emailTemplateRoutes = {
       const stored = db.prepare(`SELECT * FROM email_templates WHERE term_id = ?`).all(termId) as EmailTemplate[];
       const byType = Object.fromEntries(stored.map(t => [t.type, t]));
 
-      const result = VALID_TYPES.map(type => {
+      const result = EMAIL_TEMPLATE_TYPES.map(type => {
         const s = byType[type];
         const def = DEFAULT_TEMPLATES[type];
         return {
@@ -43,7 +42,7 @@ export const emailTemplateRoutes = {
       await requireAuth(req);
       const { id: termId, type } = (req as BunRequest<{ id: string; type: string }>).params;
 
-      if (!VALID_TYPES.includes(type as EmailTemplateType)) {
+      if (!EMAIL_TEMPLATE_TYPES.includes(type as EmailTemplateType)) {
         return Response.json({ error: "Invalid type" }, { status: 400 });
       }
 
@@ -70,7 +69,7 @@ export const emailTemplateRoutes = {
       await requireAuth(req);
       const { id: termId, type } = (req as BunRequest<{ id: string; type: string }>).params;
 
-      if (!VALID_TYPES.includes(type as EmailTemplateType)) {
+      if (!EMAIL_TEMPLATE_TYPES.includes(type as EmailTemplateType)) {
         return Response.json({ error: "Invalid type" }, { status: 400 });
       }
 
@@ -107,7 +106,7 @@ export const emailTemplateRoutes = {
       await requireAuth(req);
       const { id: termId, type } = (req as BunRequest<{ id: string; type: string }>).params;
 
-      if (!VALID_TYPES.includes(type as EmailTemplateType)) {
+      if (!EMAIL_TEMPLATE_TYPES.includes(type as EmailTemplateType)) {
         return Response.json({ error: "Invalid type" }, { status: 400 });
       }
 

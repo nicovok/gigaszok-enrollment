@@ -1,5 +1,5 @@
 import { requireAuth } from "../middleware";
-import { db, getTemplate } from "../db";
+import { db, getTemplate, requireTerm } from "../db";
 import type { BunRequest, Applicant } from "../schema";
 import { sendRegistrationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
 import { fireWebhook } from "../webhook_caller";
@@ -17,6 +17,7 @@ export const messagingRoutes = {
     async POST(req: Request) {
       await requireAuth(req);
       const termId = (req as BunRequest<{ id: string }>).params.id;
+      requireTerm(termId);
       const { subject, body, filter } = await req.json() as { subject: string; body: string; filter: "all" | "paid" | "unpaid" };
 
       if (!subject?.trim() || !body?.trim()) {
@@ -44,6 +45,7 @@ export const messagingRoutes = {
     async POST(req: Request) {
       await requireAuth(req);
       const termId = (req as BunRequest<{ id: string }>).params.id;
+      requireTerm(termId);
       const unpaid = db.prepare(
         `SELECT * FROM applicants WHERE term_id = ? AND paid = 0 AND email != ''`
       ).all(termId) as Applicant[];

@@ -1,5 +1,5 @@
 import { requireAuth } from "../middleware";
-import { db } from "../db";
+import { db, requireTerm } from "../db";
 import type { BunRequest, Applicant, CSVResult } from "../schema";
 import { parseCSV, isAmount5000 } from "../csv";
 import { handlePaymentConfirmed } from "../payment";
@@ -10,6 +10,7 @@ export const csvImportRoutes = {
       await requireAuth(req);
       const termId = (req as BunRequest<{ id: string }>).params.id;
 
+      requireTerm(termId);
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
       if (!file) return Response.json({ error: "No file uploaded" }, { status: 400 });
