@@ -1,11 +1,33 @@
-import { useMemo } from "react";
-import { Paper, Table, Text, Badge, Button, Group, Tooltip, ActionIcon, Center, Loader } from "@mantine/core";
+import { useMemo, useState } from "react";
+import { Paper, Table, Text, Badge, Button, Group, Tooltip, ActionIcon, Center, Loader, Modal, Stack, Anchor } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { IconMail, IconBell, IconTrash, IconHistory } from "@tabler/icons-react";
+import { IconMail, IconBell, IconTrash, IconHistory, IconForms } from "@tabler/icons-react";
 import { useApplicantStore } from "@/stores/use_applicant_store";
+import { apiFetch } from "@/lib/api";
+import { useTermStore } from "@/stores/use_term_store";
 import { formatDate } from "@/lib/utils";
 import type { Applicant, EmailLog } from "@/types";
+
+type FormField = { name: string; type: string; value: unknown };
+
+function renderFieldValue(field: FormField): React.ReactNode {
+  if (field.value == null) return <Text size="sm" c="dimmed">—</Text>;
+  if (field.type === "signature") {
+    const files = field.value as Array<{ file_url?: string; file_name?: string }>;
+    return (
+      <Stack gap={2}>
+        {files.map((f, i) => (
+          f.file_url
+            ? <Anchor key={i} href={f.file_url} target="_blank" size="sm">{f.file_name ?? "Aláírás"}</Anchor>
+            : <Text key={i} size="sm">{f.file_name ?? "Aláírás"}</Text>
+        ))}
+      </Stack>
+    );
+  }
+  if (Array.isArray(field.value)) return <Text size="sm">{field.value.join(", ")}</Text>;
+  return <Text size="sm">{String(field.value)}</Text>;
+}
 
 type Props = {
   onEmailLog: (a: Applicant, logs: EmailLog[]) => void;
@@ -36,6 +58,20 @@ export function ApplicantsTable({ onEmailLog }: Props) {
     applicants, filter, loading, fetchEmailLog,
     togglePaid, sendReminder, sendRegistrationEmail, deleteApplicant,
   } = useApplicantStore();
+  const [formDataModal, setFormDataModal] = useState<{ applicant: Applicant; fields: FormField[] } | null>(null);
+
+  async function openFormData(a: Applicant) {
+    const termId = useTermStore.getState().selectedTermId;
+    if (!termId) return;
+    const full = await apiFetch<Applicant & { raw_json: string }>(`/api/terms/${termId}/applicants/${a.id}`);
+    let fields: FormField[] = [];
+    try {
+      const parsed = JSON.parse(full.raw_json);
+      const formFields = parsed?.form_fields ?? {};
+      fields = Object.values(formFields) as FormField[];
+    } catch { /* skip */ }
+    setFormDataModal({ applicant: a, fields });
+  }
 
   const filtered = useMemo(() =>
     applicants.filter(a => filter === "all" ? true : filter === "paid" ? a.paid === 1 : a.paid === 0),
@@ -45,6 +81,33 @@ export function ApplicantsTable({ onEmailLog }: Props) {
   if (loading) return <Center py="xl"><Loader /></Center>;
 
   return (
+    <>
+    <Modal
+      opened={formDataModal !== null}
+      onClose={() => setFormDataModal(null)}
+      title={formDataModal ? `Jelentkezési adatok — ${formDataModal.applicant.child_name}` : ""}
+      size="lg"
+    >
+      {formDataModal && (
+        <Table>
+          <Table.Tbody>
+            {formDataModal.fields.map((field, i) => (
+              <Table.Tr key={i}>
+                <Table.Td w="40%" fw={500} fz="sm" style={{ verticalAlign: "top" }}>{field.name}</Table.Td>
+                <Table.Td>{renderFieldValue(field)}</Table.Td>
+              </Table.Tr>
+            ))}
+            {formDataModal.fields.length === 0 && (
+              <Table.Tr>
+                <Table.Td colSpan={2}>
+                  <Text c="dimmed" fz="sm">Nincs form adat.</Text>
+                </Table.Td>
+              </Table.Tr>
+            )}
+          </Table.Tbody>
+        </Table>
+      )}
+    </Modal>
     <Paper withBorder radius="md">
       <Table striped highlightOnHover>
         <Table.Thead>
@@ -143,6 +206,14 @@ export function ApplicantsTable({ onEmailLog }: Props) {
                         <IconTrash size={14} />
                       </ActionIcon>
                     </Tooltip>
+                    <Tooltip label="Jelentkezési adatok">
+                      <ActionIcon
+                        fz="sm" variant="subtle" color="violet"
+                        onClick={() => openFormData(a)}
+                      >
+                        <IconForms size={14} />
+                      </ActionIcon>
+                    </Tooltip>
                     <Tooltip label="Email napló">
                       <ActionIcon
                         fz="sm" variant="subtle" color="gray"
@@ -162,5 +233,6 @@ export function ApplicantsTable({ onEmailLog }: Props) {
         </Table.Tbody>
       </Table>
     </Paper>
+    </>
   );
 }

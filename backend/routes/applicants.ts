@@ -17,6 +17,13 @@ export const applicantRoutes = {
   },
 
   "/api/terms/:id/applicants/:applicantId": {
+    async GET(req: Request) {
+      await requireAuth(req);
+      const { id: termId, applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;
+      const applicant = db.prepare(`SELECT * FROM applicants WHERE id = ? AND term_id = ?`).get(applicantId, termId) as Applicant | null;
+      if (!applicant) return Response.json({ error: "Not found" }, { status: 404 });
+      return Response.json(applicant);
+    },
     async DELETE(req: Request) {
       await requireAuth(req);
       const { id: termId, applicantId } = (req as BunRequest<{ id: string; applicantId: string }>).params;

@@ -3,7 +3,7 @@ import {
   AppShell, Stack, Alert, Group, Button, SegmentedControl,
   Paper, Code, CopyButton, Tooltip, ActionIcon, FileButton, Text,
 } from "@mantine/core";
-import { IconAlertCircle, IconCheck, IconCopy, IconSend, IconUpload } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconCopy, IconDownload, IconSend, IconUpload } from "@tabler/icons-react";
 import { Header } from "./header";
 import { StatsBar } from "./stats_bar";
 import { ApplicantsTable } from "./applicants_table";
@@ -26,7 +26,7 @@ type ModalState =
 
 export default function Dashboard() {
   const { terms, selectedTermId, fetchTerms } = useTermStore();
-  const { applicants, filter, csvLoading, csvResult, setFilter, fetchApplicants, uploadCSV } = useApplicantStore();
+  const { applicants, filter, csvLoading, csvResult, xlsxLoading, setFilter, fetchApplicants, uploadCSV, downloadXlsx } = useApplicantStore();
 
   const [modal, setModal] = useState<ModalState>({ type: "none" });
   const closeModal = () => setModal({ type: "none" });
@@ -104,6 +104,15 @@ export default function Dashboard() {
                     {csvResult.updated} frissítve, {csvResult.already_paid} már fizette
                   </Text>
                 )}
+                <Button
+                  variant="light"
+                  color="teal"
+                  leftSection={<IconDownload size={15} />}
+                  loading={xlsxLoading}
+                  onClick={() => downloadXlsx()}
+                >
+                  Excel export
+                </Button>
                 <Button
                   variant="light"
                   color="orange"
