@@ -28,8 +28,7 @@ export const xlsxExportRoutes = {
       const parsedRows = rows.map(row => {
         let formFields: Record<string, { value: unknown; name: string; type: string }> = {};
         try {
-          const parsed = row.raw_json ? JSON.parse(row.raw_json) : {};
-          formFields = parsed?.form_fields ?? {};
+          formFields = row.raw_json ? JSON.parse(row.raw_json) : {};
         } catch { /* skip */ }
         for (const entry of Object.values(formFields)) {
           fieldNames.add(entry.name);

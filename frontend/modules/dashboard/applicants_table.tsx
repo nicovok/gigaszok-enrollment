@@ -66,8 +66,7 @@ export function ApplicantsTable({ onEmailLog }: Props) {
     const full = await apiFetch<Applicant & { raw_json: string }>(`/api/terms/${termId}/applicants/${a.id}`);
     let fields: FormField[] = [];
     try {
-      const parsed = JSON.parse(full.raw_json);
-      const formFields = parsed?.form_fields ?? {};
+      const formFields = full.raw_json ? JSON.parse(full.raw_json) : {};
       fields = Object.values(formFields) as FormField[];
     } catch { /* skip */ }
     setFormDataModal({ applicant: a, fields });
