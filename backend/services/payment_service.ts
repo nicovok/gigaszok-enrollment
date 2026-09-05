@@ -1,8 +1,8 @@
-import { getTemplate } from "./db";
-import { sendPaymentConfirmationEmail } from "./email";
+import { getTemplate } from "../db";
+import { sendPaymentConfirmationEmail } from "../email";
 import { logEmail } from "./email_log";
 import { fireWebhook } from "./webhook_caller";
-import type { Applicant } from "./schema";
+import type { Applicant } from "../schema";
 
 export function handlePaymentConfirmed(termId: string, applicant: Applicant): void {
   const tpl = getTemplate(termId, "payment_confirmation");

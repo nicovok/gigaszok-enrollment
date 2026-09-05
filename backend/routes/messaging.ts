@@ -2,8 +2,8 @@ import { requireAuth } from "../middleware";
 import { db, getTemplate, requireTerm } from "../db";
 import type { BunRequest, Applicant } from "../schema";
 import { sendRegistrationEmail, sendReminderEmail, sendBroadcastEmail } from "../email";
-import { fireWebhook } from "../webhook_caller";
-import { logEmail } from "../email_log";
+import { fireWebhook } from "../services/webhook_caller";
+import { logEmail } from "../services/email_log";
 
 function countSettled(results: PromiseSettledResult<unknown>[]) {
   return {

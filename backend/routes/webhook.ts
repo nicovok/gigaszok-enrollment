@@ -2,8 +2,8 @@ import { db, getTemplate } from "../db";
 import type { BunRequest, Term, Applicant } from "../schema";
 import { randomUUID } from "crypto";
 import { sendRegistrationEmail } from "../email";
-import { logEmail } from "../email_log";
-import { fireWebhook } from "../webhook_caller";
+import { logEmail } from "../services/email_log";
+import { fireWebhook } from "../services/webhook_caller";
 
 export const webhookRoutes = {
   "/webhooks/:slug": {

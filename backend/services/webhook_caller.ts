@@ -1,5 +1,5 @@
-import { db } from "./db";
-import type { Applicant, WebhookEventType } from "./schema";
+import { db } from "../db";
+import type { Applicant, WebhookEventType } from "../schema";
 
 type HookRow = { url: string; auth_header: string | null };
 

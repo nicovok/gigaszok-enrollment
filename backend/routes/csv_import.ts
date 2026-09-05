@@ -1,8 +1,8 @@
 import { requireAuth } from "../middleware";
 import { db, requireTerm } from "../db";
 import type { BunRequest, Applicant, CSVResult } from "../schema";
-import { parseCSV, isAmount5000 } from "../csv";
-import { handlePaymentConfirmed } from "../payment";
+import { parseCSV, isAmount5000 } from "../services/csv";
+import { handlePaymentConfirmed } from "../services/payment_service";
 
 export const csvImportRoutes = {
   "/api/terms/:id/csv": {

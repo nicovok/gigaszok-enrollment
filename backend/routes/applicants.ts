@@ -1,7 +1,7 @@
 import { requireAuth } from "../middleware";
 import { db, requireTerm } from "../db";
 import type { BunRequest, Applicant, EmailLog } from "../schema";
-import { handlePaymentConfirmed } from "../payment";
+import { handlePaymentConfirmed } from "../services/payment_service";
 
 export const applicantRoutes = {
   "/api/terms/:id/applicants": {
