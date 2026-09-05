@@ -1,16 +1,13 @@
 import { Database } from "bun:sqlite";
 import type { EmailTemplate, Term } from "./schema";
+import { NotFoundError } from "./errors";
 
 const sqlite = new Database(Bun.env.DB_PATH ?? "beiratkozas.db");
 export const db = sqlite;
 
-export class TermNotFoundError extends Error {
-  constructor() { super("Term not found"); this.name = "TermNotFoundError"; }
-}
-
 export function requireTerm(termId: string): Term {
   const term = db.prepare(`SELECT * FROM terms WHERE id = ?`).get(termId) as Term | null;
-  if (!term) throw new TermNotFoundError();
+  if (!term) throw new NotFoundError("Term not found");
   return term;
 }
 
