@@ -52,12 +52,27 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
 }
 
 export function getPocketIDLogoutUrl(postLogoutRedirectUri: string): string {
-  return `${POCKETID_BASE_URL}/logout?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
+  return `${POCKETID_BASE_URL}/api/oidc/end-session?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
 }
 
-export function getPocketIDAuthUrl(): string {
+const pendingStates = new Map<string, number>();
+
+export function generateState(): string {
+  const state = crypto.randomBytes(16).toString("hex");
+  pendingStates.set(state, Date.now() + 10 * 60 * 1000);
+  return state;
+}
+
+export function consumeState(state: string): boolean {
+  const expiry = pendingStates.get(state);
+  if (!expiry) return false;
+  pendingStates.delete(state);
+  return Date.now() < expiry;
+}
+
+export function getPocketIDAuthUrl(state: string): string {
   const scope = "openid profile email";
-  return `${POCKETID_BASE_URL}/authorize?client_id=${config.pocketId.clientId}&redirect_uri=${encodeURIComponent(config.pocketId.redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+  return `${POCKETID_BASE_URL}/authorize?client_id=${config.pocketId.clientId}&redirect_uri=${encodeURIComponent(config.pocketId.redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`;
 }
 
 type OAuthTokenResponse = {

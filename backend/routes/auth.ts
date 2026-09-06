@@ -1,17 +1,32 @@
-import { signToken, verifyToken, getPocketIDAuthUrl, getPocketIDLogoutUrl, exchangeCodeForToken, getUserInfo } from "../auth";
+import { signToken, verifyToken, getPocketIDAuthUrl, getPocketIDLogoutUrl, exchangeCodeForToken, getUserInfo, generateState, consumeState } from "../auth";
 import { db } from "../db";
 import type { Admin } from "../schema";
 import { randomUUID } from "crypto";
 
 export const authRoutes = {
   "/api/auth/login": {
-    GET: () => Response.json({ authUrl: getPocketIDAuthUrl() }),
+    GET: () => {
+      const state = generateState();
+      return Response.json({ authUrl: getPocketIDAuthUrl(state) });
+    },
   },
 
   "/api/auth/callback": {
     async GET(req: Request) {
-      const code = new URL(req.url).searchParams.get("code");
-      if (!code) return Response.json({ error: "Missing code" }, { status: 400 });
+      const params = new URL(req.url).searchParams;
+      const code = params.get("code");
+      const state = params.get("state");
+      const oidcError = params.get("error");
+      const oidcErrorDesc = params.get("error_description");
+
+      if (!code) {
+        const msg = oidcErrorDesc ?? oidcError ?? "Missing code";
+        return new Response(null, { status: 302, headers: { Location: `/?login_error=${encodeURIComponent(msg)}` } });
+      }
+
+      if (!state || !consumeState(state)) {
+        return new Response(null, { status: 302, headers: { Location: `/?login_error=${encodeURIComponent("Invalid or expired state")}` } });
+      }
 
       try {
         const tokenData = await exchangeCodeForToken(code);
@@ -35,7 +50,8 @@ export const authRoutes = {
         const token = await signToken({ sub: admin.id, email: admin.email, name: admin.name, picture: userInfo.picture });
         return new Response(null, { status: 302, headers: { Location: `/?token=${token}` } });
       } catch (err) {
-        return Response.json({ error: "Auth failed", details: String(err) }, { status: 400 });
+        const msg = encodeURIComponent(`Auth failed: ${String(err)}`);
+        return new Response(null, { status: 302, headers: { Location: `/?login_error=${msg}` } });
       }
     },
   },
