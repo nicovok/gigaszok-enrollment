@@ -12,6 +12,7 @@ import { emailTemplateRoutes } from "./routes/email_templates";
 import { outgoingWebhookRoutes } from "./routes/outgoing_webhooks";
 import { webhookRoutes } from "./routes/webhook";
 import { xlsxExportRoutes } from "./routes/xlsx_export";
+import { registryRoutes } from "./routes/registry";
 import frontend from "../frontend/index.html";
 
 initDb();
@@ -29,6 +30,7 @@ const server = Bun.serve({
     ...emailTemplateRoutes,
     ...outgoingWebhookRoutes,
     ...xlsxExportRoutes,
+    ...registryRoutes,
     ...webhookRoutes,
   },
   error(err) {
