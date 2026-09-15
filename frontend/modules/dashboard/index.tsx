@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   AppShell, Stack, Alert, Group, Button, SegmentedControl,
-  Paper, Code, CopyButton, Tooltip, ActionIcon, FileButton, Text,
+  Paper, Code, CopyButton, Tooltip, ActionIcon, FileButton, Text, Menu,
 } from "@mantine/core";
-import { IconAlertCircle, IconCheck, IconCopy, IconDownload, IconSend, IconUpload } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconCopy, IconDownload, IconSend, IconUpload, IconDatabaseExport, IconDatabaseImport, IconChevronDown } from "@tabler/icons-react";
 import { Header } from "./header";
 import { StatsBar } from "./stats_bar";
 import { ApplicantsTable } from "./applicants_table";
@@ -13,6 +13,8 @@ import { EmailTemplatesModal } from "./modals/email_templates_modal";
 import { BroadcastModal } from "./modals/broadcast_modal";
 import { ReminderModal } from "./modals/reminder_modal";
 import { EmailLogModal } from "./modals/email_log_modal";
+import { RegistryExportModal } from "./modals/registry_export_modal";
+import { RegistryImportModal } from "./modals/registry_import_modal";
 import { useTermStore } from "@/stores/use_term_store";
 import { useApplicantStore } from "@/stores/use_applicant_store";
 import type { Applicant, EmailLog } from "@/types";
@@ -22,6 +24,8 @@ type ModalState =
   | { type: "terms" }
   | { type: "broadcast" }
   | { type: "remind" }
+  | { type: "registryExport" }
+  | { type: "registryImport" }
   | { type: "emailLog"; applicant: Applicant; logs: EmailLog[] };
 
 export default function Dashboard() {
@@ -129,6 +133,21 @@ export default function Dashboard() {
                 >
                   Egyedi email
                 </Button>
+                <Menu position="bottom-end" withinPortal>
+                  <Menu.Target>
+                    <Button variant="light" color="violet" rightSection={<IconChevronDown size={13} />}>
+                      Adatcsere
+                    </Button>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item leftSection={<IconDatabaseExport size={14} />} onClick={() => setModal({ type: "registryExport" })}>
+                      Exportálás
+                    </Menu.Item>
+                    <Menu.Item leftSection={<IconDatabaseImport size={14} />} onClick={() => setModal({ type: "registryImport" })}>
+                      Importálás
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               </Group>
             </Group>
           )}
@@ -141,6 +160,8 @@ export default function Dashboard() {
         </Stack>
       </AppShell.Main>
 
+      <RegistryExportModal opened={modal.type === "registryExport"} onClose={closeModal} />
+      <RegistryImportModal opened={modal.type === "registryImport"} onClose={closeModal} />
       <TermsModal opened={modal.type === "terms"} onClose={closeModal} />
       <WebhooksModal />
       <EmailTemplatesModal />
